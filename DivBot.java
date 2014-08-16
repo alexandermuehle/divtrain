@@ -63,7 +63,14 @@ public static String LAST_FM;
 		m = r.matcher(message);
 		if (m.find()) {
 			String songInfo = getSongFromLastFM(LAST_FM);
-			String msg = sender + ": Now playing: " + songInfo;
+			String msg = "this should never be seen";
+			if (songInfo.equals("private")){
+				msg = "No Song playing right now";
+			}
+			else{
+				msg = sender + ": Now playing: " + songInfo;
+			}
+			
 			sendMessage(channel, msg);
 		}
 
@@ -74,7 +81,7 @@ public static String LAST_FM;
 			String songInfo = getSongFromLastFM(LAST_FM);
 			String msg = "this should never be seen";
 			if (songInfo.equals("private")){
-				msg = sender + ": No Song playing right now";
+				msg = "No Song playing right now";
 			}
 			else{
 				msg = sender + ": Now playing: " + songInfo;
@@ -95,13 +102,7 @@ public static String LAST_FM;
 				return;
 			}
 			String targetSteam = getSteamFromTwitch(target, channel);
-			if ( targetSteam.equals("noSteamId") ){
-				sendMessage(channel, target + " has not linked his Steam account to Twitch. Use !connect for more info");
-			}
-			else if ( targetSteam.equals("twitchConnectionError") ){
-				sendMessage(channel, target + ": there has been an error contacting the Twitch servers");
-				}
-			else{
+			if ( !errorHandling(targetSteam, channel, target)){
 				if (game.equalsIgnoreCase("tf2")){
 					sendMessage(channel, target + ": http://logs.tf/profile/" + targetSteam);
 				}
@@ -121,16 +122,7 @@ public static String LAST_FM;
 			//getting steam from twitch
 			String target = m.group(2);	//group 2 = name
 			String targetSteam = getSteamFromTwitch(target, channel);
-			if ( targetSteam.equals("noSteamId") ){
-				sendMessage(channel, target + " has not linked his Steam account to Twitch. Use !connect for more info");
-				}
-			else if ( targetSteam.equals("twitchConnectionError") ){
-				sendMessage(channel, target + ": there has been an error contacting the Twitch servers");
-				}
-			else if ( targetSteam.equals("twitchJsonError") ){
-				sendMessage(channel, target + " Error while reading JSON from Twitch");
-				}
-			else{
+			if ( !errorHandling(targetSteam, channel, target) ){
 				String logLink = getLogLink(targetSteam);
 				String msg = target + ": Last game: " + logLink;
 				sendMessage(channel, msg);
@@ -144,17 +136,7 @@ public static String LAST_FM;
 			//getting steam from twitch
 			String target = m.group(2);	//group 2 = name
 			String targetSteam = getSteamFromTwitch(target, channel);
-			if ( targetSteam.equals("noSteamId") ){
-				sendMessage(channel, target + " has not linked his Steam account to Twitch. Use !connect for more info");
-				}
-			else if ( targetSteam.equals("twitchConnectionError") ){
-				sendMessage(channel, target + ": there has been an error contacting the Twitch servers");
-				}
-			else if ( targetSteam.equals("twitchJsonError") ){
-				sendMessage(channel, target + " Error while reading JSON from Twitch");
-				}
-			else{
-				System.out.println(longToSteam(new Long(targetSteam)));
+			if ( !errorHandling(targetSteam, channel, target) ){
 				String etf2lInfo = etf2lParse(longToSteam(new Long(targetSteam)));
 				String msg = target + ": " + etf2lInfo;
 				sendMessage(channel, msg);
@@ -168,17 +150,7 @@ public static String LAST_FM;
 			//getting steam from twitch
 			String target = m.group(2);	//group 2 = name
 			String targetSteam = getSteamFromTwitch(target, channel);
-			if ( targetSteam.equals("noSteamId") ){
-				sendMessage(channel, target + " has not linked his Steam account to Twitch. Use !connect for more info");
-				}
-			else if ( targetSteam.equals("twitchConnectionError") ){
-				sendMessage(channel, target + ": there has been an error contacting the Twitch servers");
-				}
-			else if ( targetSteam.equals("twitchJsonError") ){
-				sendMessage(channel, target + " Error while reading JSON from Twitch");
-				}
-			else{
-				System.out.println(longToSteam(new Long(targetSteam)));
+			if ( !errorHandling(targetSteam, channel, target) ){
 				String IPInfo = getServerFromSteam(targetSteam);
 				String msg = target + ": Server Info: " + IPInfo;
 				sendMessage(channel, msg);
@@ -194,37 +166,35 @@ public static String LAST_FM;
 			String game = m.group(3);	//group 3 = game
 			String targetSteam = getSteamFromTwitch(target, channel);
 			String targetHours = "No game specified";
-			if ( !game.equalsIgnoreCase("tf2") && !game.equalsIgnoreCase("csgo") && !game.equalsIgnoreCase("dota2") ){
-				sendMessage(channel, sender + ": please specify the game you want hours of as follows: Dota 2 = dota2, TeamFortress 2 = tf2, CS:GO = csgo");
-				return;
-			}
-			if (m.group(3).equals("tf2"))
-				targetHours = getHoursFromSteam(targetSteam, 440, channel); // second arg is gameId (440=tf2)
-			if (m.group(3).equals("dota2"))
-				targetHours = getHoursFromSteam(targetSteam, 570, channel); // second arg is gameId (440=tf2)
-			if (m.group(3).equals("csgo"))
-				targetHours = getHoursFromSteam(targetSteam, 730, channel); // second arg is gameId (440=tf2)
-			if ( targetSteam.equals("noSteamId") ){
-				sendMessage(channel, target + " has not linked his Steam account to Twitch. Use !connect for more info");
+			if ( !errorHandling(targetSteam, channel, target) ){
+				switch(game){
+					case "tf2": 
+						targetHours = getHoursFromSteam(targetSteam, 440, channel); // second arg is gameId (440=tf2)
+						break;
+					case "dota2":
+						targetHours = getHoursFromSteam(targetSteam, 570, channel); // second arg is gameId (440=tf2)
+						break;
+					case "csgo":
+						targetHours = getHoursFromSteam(targetSteam, 730, channel); // second arg is gameId (440=tf2)
+						break;
+					default:
+						sendMessage(channel, sender + ": please specify the game you want hours of as follows: Dota 2 = dota2, TeamFortress 2 = tf2, CS:GO = csgo");
+						return;
 				}
-			else if ( targetSteam.equals("steamConnectionError") ){
-				sendMessage(channel, target + " has not linked his Steam account to Twitch. Use !connect for more info");
+				if ( targetHours.equals("private") ){
+					sendMessage(channel, target + " has set his profile to private or has other privacy settings enabled");
+					return;
 				}
-			else if ( targetSteam.equals("twitchConnectionError") ){
-				sendMessage(channel, target + ": there has been an error contacting the Twitch servers");
+				else{
+					String msg = target + ": " + targetHours;
+					if (game.equals("tf2"))
+						msg = msg + "h played in TF2";
+					if (game.equals("dota2"))
+						msg = msg + "h played in Dota";
+					if (game.equals("csgo"))
+						msg = msg + "h played in CS:GO";
+					sendMessage(channel, msg);
 				}
-			else if ( targetHours.equals("private") ){
-				sendMessage(channel, target + " has set his profile to private or has other privacy settings enabled");
-				}
-			else{
-				String msg = target + ": " + targetHours;
-				if (m.group(3).equals("tf2"))
-					msg = msg + "h played in TF2";
-				if (m.group(3).equals("dota2"))
-					msg = msg + "h played in Dota";
-				if (m.group(3).equals("csgo"))
-					msg = msg + "h played in CS:GO";
-				sendMessage(channel, msg);
 			}
 		}
 		
@@ -233,7 +203,6 @@ public static String LAST_FM;
 		m = r.matcher(message);    
 		if (m.find()) {
 			sendMessage(channel, "This bot has been created by lexs. Please feel free to send feedback to: alexander.muhle@gmail.com");
-
 		}
 		
 		//CONNECT
@@ -247,7 +216,7 @@ public static String LAST_FM;
 		r = Pattern.compile(comm);
 		m = r.matcher(message);    
 		if (m.find()) {
-			sendMessage(channel, "Commands: !server [name] || !stats [name] [game] || !hours [name] [game] || !profile [name] || !div [name]");
+			sendMessage(channel, "Commands: !server [name] || !stats [name] [game] || !hours [name] [game] || !profile [name] || !div [name] || !log [name] !np");
 		}
 	}
 	
@@ -287,6 +256,8 @@ public static String LAST_FM;
 	}
 	
 	private String getSongFromLastFM(String lastfm){
+	
+		//REQUEST
 		URLConnection connection = null;
 		String url = "http://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=" + LAST_FM + "&limit=1&api_key=d5732c5865e524de715834b800e33d3c&format=json";
 		System.out.println(url);
@@ -304,6 +275,7 @@ public static String LAST_FM;
 			return "lastFMConnectionError";
 		}
 
+		//JSON
 		JSONObject response = null;
 		try{
 			JSONObject lastFMJson = new JSONObject(result);
@@ -324,6 +296,8 @@ public static String LAST_FM;
 	}	
 
 	private String getServerFromSteam(String targetSteam){
+	
+		//REQUEST
 		URLConnection connection = null;
 		String url = "http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=209970D697E121D8CCFB244B336585B9&steamids=" + targetSteam; //default is json
 		System.out.println(url);
@@ -340,6 +314,8 @@ public static String LAST_FM;
 		catch(Exception e) {
 			return "steamConnectionError";
 		}
+		
+		//JSON
 		JSONObject response = null;
 		JSONArray players = null;
 		try{
@@ -369,6 +345,8 @@ public static String LAST_FM;
 	}
 	
 	private String getHoursFromSteam(String targetSteam, int gameId, String channel){
+		
+		//REQUEST
 		URLConnection connection = null;
 		String url = "http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v0001/?key=209970D697E121D8CCFB244B336585B9&steamid=" + targetSteam; //default is json
 		System.out.println(url);
@@ -385,9 +363,8 @@ public static String LAST_FM;
 		catch(Exception e) {
 			return "steamConnectionError";
 		}
-		finally{
-			//hm sollte noch closen oder so
-		}
+
+		//JSON
 		try{
 			JSONObject steamJson = new JSONObject(result);
 			if ( steamJson.has("response") && !steamJson.isNull("response") ){
@@ -418,6 +395,8 @@ public static String LAST_FM;
 	}
 	
 	private String getProfileFromBuff(String targetSteam, String channel){
+	
+		//REQUEST
 		URLConnection connection = null;
 		String url = "http://dotabuff.com/search/hints.json?q=" + targetSteam; //hint json, fuck xml
 		String result = "";		
@@ -434,6 +413,7 @@ public static String LAST_FM;
 			return "steamConnectionError";
 		}
 		
+		//JSON
 		try{
 			JSONArray buffJsonA = new JSONArray(result);
 			JSONObject buffJson = buffJsonA.getJSONObject(0);
@@ -449,6 +429,8 @@ public static String LAST_FM;
 	}
 
     private String getSteamFromTwitch(String target, String channel){
+	
+		//REQUEST
 		URLConnection connection = null;
 		String url = "http://api.twitch.tv/api/channels/" + target;
 		String result = "error";
@@ -465,6 +447,7 @@ public static String LAST_FM;
 			return "twitchConnectionError";
 		}
 
+		//JSON
 		try{
 			JSONObject twitchJson = new JSONObject(result);
 			if ( twitchJson.has("steam_id") && !twitchJson.isNull("steam_id") )
@@ -488,6 +471,8 @@ public static String LAST_FM;
     }
     
     private String etf2lParse(String steamId){
+	
+		//REQUEST
 		URLConnection connection = null;
 		String url = "http://etf2l.org/feed/player/?steamid=" + steamId;
 		String result = "";
@@ -512,6 +497,7 @@ public static String LAST_FM;
 			//close?
 		}
 
+		//XML-aids
 		try{
 			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 			DocumentBuilder builder = factory.newDocumentBuilder();
@@ -551,4 +537,24 @@ public static String LAST_FM;
 			}
 		return (division + " " + team + " (" + type + ")");
     }
+	
+	private Boolean errorHandling(String targetSteam, String channel, String target){
+		
+		if ( targetSteam.equals("noSteamId") ){
+				sendMessage(channel, target + " has not linked his Steam account to Twitch. Use !connect for more info");
+				return true;
+		}
+		else if ( targetSteam.equals("twitchConnectionError") ){
+			sendMessage(channel, target + ": there has been an error contacting the Twitch servers");
+			return true;
+		}
+		else if ( targetSteam.equals("twitchJsonError") ){
+			sendMessage(channel, target + " Error while reading JSON from Twitch");
+			return true;
+		}
+		else{
+			return false;
+		}
+		
+	}
 }
