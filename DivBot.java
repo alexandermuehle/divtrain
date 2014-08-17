@@ -15,6 +15,20 @@ import javax.xml.transform.stream.StreamResult;
 public class DivBot extends PircBot {
     
 public static String LAST_FM;
+		
+		//regex for !lookup name
+		public static Pattern prof = Pattern.compile("(!profile)\\s*(\\w*)\\s*\\z");
+		public static Pattern div = Pattern.compile("(!div)\\s*(\\w*)\\s*\\z");
+		public static Pattern ip = Pattern.compile("(!server)\\s*(\\w*)\\s*\\z");
+		public static Pattern song = Pattern.compile("(!song)\\s*\\z");
+		public static Pattern song2 = Pattern.compile("(!np)\\s*\\z");
+		public static Pattern hours = Pattern.compile("(!hours)\\s*(\\w*)\\s*(\\w*)");
+		public static Pattern stats = Pattern.compile("(!stats)\\s*(\\w*)\\s*(\\w*)");
+		public static Pattern log = Pattern.compile("(!log)\\s*(\\w*)");
+		public static Pattern credit = Pattern.compile("(!credit)\\b");
+		public static Pattern conn = Pattern.compile("(!connect)\\b");
+		public static Pattern comm = Pattern.compile("(!command)");
+		Matcher m;
 
     public DivBot(String lastfm) {
         this.setName("divtrain");
@@ -24,44 +38,26 @@ public static String LAST_FM;
     // react to messages
     public void onMessage(String channel, String sender, String login, String hostname, String message) {
 		
-		//regex for !lookup name
-		String prof = "(!profile.)(\\w+)";
-		String div = "(!div.)(\\w+)";
-		String ip = "(!server.)(\\w+)";
-		String song = "(!song)";
-		String song2 = "(!np)";
-		String hours = "(!hours.)(\\w+).(\\w+)";
-		String stats = "(!stats.)(\\w+).(\\w+)";
-		String log = "(!log.)(\\w+)";
-		String credit = "(!credit)";
-		String conn = "(!connect)";
-		String comm = "(!command)";
-		Pattern r;
-		Matcher m;
+
 		
 		//PROFILE
-		r = Pattern.compile(prof);
-		m = r.matcher(message);
+		m = prof.matcher(message);
 		if (m.find()) {
 			//getting steam from twitch
 			String target = m.group(2);	//group 2 = name
+			if ( target.equalsIgnoreCase("") ) { 
+				sendMessage(channel, sender + ": no name provided");
+				return;
+			}
 			String targetSteam = getSteamFromTwitch(target, channel);
-			if ( targetSteam.equals("noSteamId") ){
-				sendMessage(channel, target + " has not linked his Steam account to Twitch. Use !connect for more info");
-				}
-			else if ( targetSteam.equals("twitchConnectionError") ){
-				sendMessage(channel, target + ": there has been an error contacting the Twitch servers (user might not exist)");
-				}
-			else{
+			if ( !errorHandling(targetSteam, channel, target) ){
 				String msg = target + ": http://steamcommunity.com/profiles/" + targetSteam;
 				sendMessage(channel, msg);
 			}
 		}
 		
 		//LASTFM
-		r = Pattern.compile(song);
-		m = r.matcher(message);
-		if (m.find()) {
+		if (song.matcher(message).find() || song2.matcher(message).find()) {
 			String songInfo = getSongFromLastFM(LAST_FM);
 			String msg = "this should never be seen";
 			if (songInfo.equals("private")){
@@ -74,29 +70,17 @@ public static String LAST_FM;
 			sendMessage(channel, msg);
 		}
 
-		//LASTFM2
-		r = Pattern.compile(song2);
-		m = r.matcher(message);
-		if (m.find()) {
-			String songInfo = getSongFromLastFM(LAST_FM);
-			String msg = "this should never be seen";
-			if (songInfo.equals("private")){
-				msg = "No Song playing right now";
-			}
-			else{
-				msg = sender + ": Now playing: " + songInfo;
-			}
-			
-			sendMessage(channel, msg);
-		}
-
+		
 		//STATS
-		r = Pattern.compile(stats);
-		m = r.matcher(message);
+		m = stats.matcher(message);
 		if (m.find()) {
 			//getting steam from twitch
 			String target = m.group(2);	//group 2 = name
 			String game = m.group(3);	//group 3 = game
+			if ( target.equalsIgnoreCase("") ) { 
+				sendMessage(channel, sender + ": no name provided");
+				return;
+			}
 			if ( !game.equalsIgnoreCase("tf2") && !game.equalsIgnoreCase("csgo") && !game.equalsIgnoreCase("dota2") ){
 				sendMessage(channel, sender + ": please specify the game you want stats of as follows: Dota 2 = dota2, TeamFortress 2 = tf2, CS:GO = csgo");
 				return;
@@ -116,11 +100,14 @@ public static String LAST_FM;
 		}
 				
 		//LOG
-		r = Pattern.compile(log);
-		m = r.matcher(message);
+		m = log.matcher(message);
 		if (m.find()) {
 			//getting steam from twitch
 			String target = m.group(2);	//group 2 = name
+			if ( target.equalsIgnoreCase("") ) { 
+				sendMessage(channel, sender + ": no name provided");
+				return;
+			}
 			String targetSteam = getSteamFromTwitch(target, channel);
 			if ( !errorHandling(targetSteam, channel, target) ){
 				String logLink = getLogLink(targetSteam);
@@ -129,26 +116,32 @@ public static String LAST_FM;
 			}
 		}
 		
-		//DIV
-		r = Pattern.compile(div);
-		m = r.matcher(message);    
+		//DIV 
+		m = div.matcher(message);
 		if (m.find()) {
 			//getting steam from twitch
 			String target = m.group(2);	//group 2 = name
+			if ( target.equalsIgnoreCase("") ) { 
+				sendMessage(channel, sender + ": no name provided");
+				return;
+			}
 			String targetSteam = getSteamFromTwitch(target, channel);
 			if ( !errorHandling(targetSteam, channel, target) ){
-				String etf2lInfo = etf2lParse(longToSteam(new Long(targetSteam)));
+				String etf2lInfo = getDivFromETF2L(longToSteam(new Long(targetSteam)));
 				String msg = target + ": " + etf2lInfo;
 				sendMessage(channel, msg);
 			}
 		}
 		
 		//IP
-		r = Pattern.compile(ip);
-		m = r.matcher(message);    
+		m = ip.matcher(message);
 		if (m.find()) {
 			//getting steam from twitch
 			String target = m.group(2);	//group 2 = name
+			if ( target.equals("") ){
+				sendMessage(channel, sender + ": no name provided");
+				return;
+			}
 			String targetSteam = getSteamFromTwitch(target, channel);
 			if ( !errorHandling(targetSteam, channel, target) ){
 				String IPInfo = getServerFromSteam(targetSteam);
@@ -158,24 +151,41 @@ public static String LAST_FM;
 		}
 		
 		//HOURS
-		r = Pattern.compile(hours);
-		m = r.matcher(message);    
-		if (m.find()) {
+		m = hours.matcher(message);
+		if ( m.find() ) {
+			String target = m.group(2);	
+			String game = m.group(3);
+			System.out.println(m.groupCount());
+
+			System.out.println(target);
+			System.out.println(game);
+			if ( target.equalsIgnoreCase("") ) { 
+				sendMessage(channel, sender + ": no name provided");
+				return;
+			}
+			if ( !game.equalsIgnoreCase("tf2") && !game.equalsIgnoreCase("csgo") && !game.equalsIgnoreCase("dota2") ){
+				sendMessage(channel, sender + ": please specify the game you want stats of as follows: Dota 2 = dota2, TeamFortress 2 = tf2, CS:GO = csgo");
+				return;
+			}
+			
 			//getting steam from twitch
-			String target = m.group(2);	//group 2 = name
-			String game = m.group(3);	//group 3 = game
 			String targetSteam = getSteamFromTwitch(target, channel);
 			String targetHours = "No game specified";
+			String msg = "";
+			String msgGame = "";
 			if ( !errorHandling(targetSteam, channel, target) ){
-				switch(game){
+				switch(game.toLowerCase()){
 					case "tf2": 
 						targetHours = getHoursFromSteam(targetSteam, 440, channel); // second arg is gameId (440=tf2)
+						msgGame = "h played in TF2";
 						break;
 					case "dota2":
 						targetHours = getHoursFromSteam(targetSteam, 570, channel); // second arg is gameId (440=tf2)
+						msg = target + ": " + targetHours + "h played in Dota";
 						break;
 					case "csgo":
 						targetHours = getHoursFromSteam(targetSteam, 730, channel); // second arg is gameId (440=tf2)
+						msg = target + ": " + targetHours + "h played in CS:GO";
 						break;
 					default:
 						sendMessage(channel, sender + ": please specify the game you want hours of as follows: Dota 2 = dota2, TeamFortress 2 = tf2, CS:GO = csgo");
@@ -185,38 +195,29 @@ public static String LAST_FM;
 					sendMessage(channel, target + " has set his profile to private or has other privacy settings enabled");
 					return;
 				}
+				else if ( targetHours.equals("steamConnectionError") ){
+					sendMessage(channel, target + ": There has been a Steam Connection Error"); 
+				}
 				else{
-					String msg = target + ": " + targetHours;
-					if (game.equals("tf2"))
-						msg = msg + "h played in TF2";
-					if (game.equals("dota2"))
-						msg = msg + "h played in Dota";
-					if (game.equals("csgo"))
-						msg = msg + "h played in CS:GO";
+					msg = target + ": " + targetHours + msgGame;
 					sendMessage(channel, msg);
 				}
 			}
 		}
 		
 		//CREDIT
-		r = Pattern.compile(credit);
-		m = r.matcher(message);    
-		if (m.find()) {
+		if (credit.matcher(message).find()) {
 			sendMessage(channel, "This bot has been created by lexs. Please feel free to send feedback to: alexander.muhle@gmail.com");
 		}
 		
-		//CONNECT
-		r = Pattern.compile(conn);
-		m = r.matcher(message);    
-		if (m.find()) {
+		//CONNECT 
+		if (conn.matcher(message).find()) {
 			sendMessage(channel, "Settings->Connections->Social->Steam");
 		}
 		
-		//COMMANDS
-		r = Pattern.compile(comm);
-		m = r.matcher(message);    
-		if (m.find()) {
-			sendMessage(channel, "Commands: !server [name] || !stats [name] [game] || !hours [name] [game] || !profile [name] || !div [name] || !log [name] !np");
+		//COMMANDS 
+		if (comm.matcher(message).find()) {
+			sendMessage(channel, "Commands: !server [name] || !stats [name] [game] || !hours [name] [game] || !profile [name] || !div [name] || !log [name] || !np || !credit");
 		}
 	}
 	
@@ -470,7 +471,7 @@ public static String LAST_FM;
 		return "0:"+authserver+":"+authid;
     }
     
-    private String etf2lParse(String steamId){
+    private String getDivFromETF2L(String steamId){
 	
 		//REQUEST
 		URLConnection connection = null;
@@ -491,7 +492,7 @@ public static String LAST_FM;
 			result = result.trim().replaceFirst("^([\\W]+)<","<");
 		}
 		catch(Exception e){
-			return "Error while opening connection to etf2l";
+			return "Error while opening connection to ETF2L";
 		}
 		finally{
 			//close?
@@ -529,11 +530,11 @@ public static String LAST_FM;
 				}
 			}
 			if (team.equals(""))
-				return "No current etf2l team";
+				return "No current ETF2L team";
 		}
 		catch(Exception e){
 			System.out.println(e.getMessage());
-			return "Error while reading etf2l XML";
+			return "Error while reading ETF2L XML";
 			}
 		return (division + " " + team + " (" + type + ")");
     }
