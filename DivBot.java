@@ -297,44 +297,44 @@ public static String LAST_FM;
 						case "np":
 							npB = !npB;
 							if (!npB)
-								sendMessage(channel, sender + ": !profile has been disabled");
+								sendMessage(channel, sender + ": !np has been disabled");
 							if (npB)
-								sendMessage(channel, sender + ": !profile has been enable");							
+								sendMessage(channel, sender + ": !np has been enable");							
 							break;
 						case "stats":
 							statsB = !statsB;
 							if (!statsB)
-								sendMessage(channel, sender + ": !profile has been disabled");
+								sendMessage(channel, sender + ": !stats has been disabled");
 							if (statsB)
-								sendMessage(channel, sender + ": !profile has been enabled");
+								sendMessage(channel, sender + ": !stats has been enabled");
 							break;
 						case "log":
 							logB = !logB;
 							if (!logB)
-								sendMessage(channel, sender + ": !profile has been disabled");
+								sendMessage(channel, sender + ": !log has been disabled");
 							if (logB)
-								sendMessage(channel, sender + ": !profile has been enabled");
+								sendMessage(channel, sender + ": !log has been enabled");
 							break;
 						case "div":
 							divB = !divB;
 							if (!divB)
-								sendMessage(channel, sender + ": !profile has been disabled");
+								sendMessage(channel, sender + ": !div has been disabled");
 							if (divB)
-								sendMessage(channel, sender + ": !profile has been enabled");
+								sendMessage(channel, sender + ": !div has been enabled");
 							break;
 						case "server":
 							serverB = !serverB;
 							if (!serverB)
-								sendMessage(channel, sender + ": !profile has been disabled");
+								sendMessage(channel, sender + ": !server has been disabled");
 							if (serverB)
-								sendMessage(channel, sender + ": !profile has been enabled");
+								sendMessage(channel, sender + ": !server has been enabled");
 							break;
 						case "hours":
 							hoursB = !hoursB;
 							if (!hoursB)
-								sendMessage(channel, sender + ": !profile has been disabled");
+								sendMessage(channel, sender + ": !hours has been disabled");
 							if (hoursB)
-								sendMessage(channel, sender + ": !profile has been enabled");	
+								sendMessage(channel, sender + ": !hours has been enabled");	
 							break;
 					}
 				}
