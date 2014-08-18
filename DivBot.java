@@ -55,7 +55,7 @@ public static String LAST_FM;
 	}
 	
 	//on connect
-	public void onTopic(String channel, String topic, String setBy, long date, boolean changed){
+	public void onUserList(String channel, User[] users) {
 		sendMessage(channel, "/mods");
 		System.out.println("getting mods");
 	}
@@ -283,7 +283,9 @@ public static String LAST_FM;
 				return;
 			}
 			else{
-				if ( mods.contains(sender) ){
+				System.out.println(mods);
+				System.out.println(sender);
+				if ( mods.contains(sender) || channel.contains(sender) ){
 					switch (command) {
 						case "profile":
 							profB = !profB;
