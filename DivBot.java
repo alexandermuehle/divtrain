@@ -28,13 +28,38 @@ public static String LAST_FM;
 		public static Pattern credit = Pattern.compile("(!credit)\\b");
 		public static Pattern conn = Pattern.compile("(!connect)\\b");
 		public static Pattern comm = Pattern.compile("(!command)");
+		public static Pattern toggle = Pattern.compile("(!toggle)\\s*(\\w*)\\s*\\z");
 		Matcher m;
-
+		
+		public String mods = "";
+		
+		//permission boolean
+		public boolean profB = true;
+		public boolean divB = true;
+		public boolean hoursB = true;
+		public boolean npB = true;
+		public boolean statsB = true;
+		public boolean serverB = true;
+		public boolean logB = true;
+		
+		
     public DivBot(String lastfm) {
         this.setName("divtrain");
 	LAST_FM = lastfm;
     }
     
+	//react to private message
+	public void onPrivateMessage(String sender, String login, String hostname, String message) {
+		mods = message;
+		System.out.println("updated mods");
+	}
+	
+	//on connect
+	public void onTopic(String channel, String topic, String setBy, long date, boolean changed){
+		sendMessage(channel, "/mods");
+		System.out.println("getting mods");
+	}
+	
     // react to messages
     public void onMessage(String channel, String sender, String login, String hostname, String message) {
 		
@@ -43,6 +68,10 @@ public static String LAST_FM;
 		//PROFILE
 		m = prof.matcher(message);
 		if (m.find()) {
+			if ( !profB ) {
+				sendMessage(channel, "This command has been disabled");
+				return;
+			}
 			//getting steam from twitch
 			String target = m.group(2);	//group 2 = name
 			if ( target.equalsIgnoreCase("") ) { 
@@ -52,12 +81,17 @@ public static String LAST_FM;
 			String targetSteam = getSteamFromTwitch(target, channel);
 			if ( !errorHandling(targetSteam, channel, target) ){
 				String msg = target + ": http://steamcommunity.com/profiles/" + targetSteam;
+				System.out.println("http://steamcommunity.com/profiles/" + targetSteam); //LOGGING
 				sendMessage(channel, msg);
 			}
 		}
 		
 		//LASTFM
-		if (song.matcher(message).find() || song2.matcher(message).find()) {
+		if ( ( song.matcher(message).find()) || ( song2.matcher(message).find())) {
+			if ( !npB ) {
+				sendMessage(channel, "This command has been disabled");
+				return;
+			}
 			String songInfo = getSongFromLastFM(LAST_FM);
 			String msg = "this should never be seen";
 			if (songInfo.equals("private")){
@@ -65,6 +99,7 @@ public static String LAST_FM;
 			}
 			else{
 				msg = sender + ": Now playing: " + songInfo;
+				System.out.println(songInfo); //LOGGING
 			}
 			
 			sendMessage(channel, msg);
@@ -74,6 +109,10 @@ public static String LAST_FM;
 		//STATS
 		m = stats.matcher(message);
 		if (m.find()) {
+			if ( !statsB ) {
+				sendMessage(channel, "This command has been disabled");
+				return;
+			}
 			//getting steam from twitch
 			String target = m.group(2);	//group 2 = name
 			String game = m.group(3);	//group 3 = game
@@ -89,12 +128,15 @@ public static String LAST_FM;
 			if ( !errorHandling(targetSteam, channel, target)){
 				if (game.equalsIgnoreCase("tf2")){
 					sendMessage(channel, target + ": http://logs.tf/profile/" + targetSteam);
+					System.out.println("http://logs.tf/profile/" + targetSteam);
 				}
 			 	if (game.equalsIgnoreCase("dota2")){
 					sendMessage(channel, target + ": dotabuff.com/players/" + targetSteam);
+					System.out.println("dotabuff.com/players/" + targetSteam);
 				}
 				if (game.equalsIgnoreCase("csgo")){
 					sendMessage(channel, target + ": http://csgo-stats.com/" + targetSteam);
+					System.out.println("http://csgo-stats.com/" + targetSteam);
 				}
 			}
 		}
@@ -102,6 +144,10 @@ public static String LAST_FM;
 		//LOG
 		m = log.matcher(message);
 		if (m.find()) {
+			if ( !logB ) {
+				sendMessage(channel, "This command has been disabled");
+				return;
+			}
 			//getting steam from twitch
 			String target = m.group(2);	//group 2 = name
 			if ( target.equalsIgnoreCase("") ) { 
@@ -112,6 +158,7 @@ public static String LAST_FM;
 			if ( !errorHandling(targetSteam, channel, target) ){
 				String logLink = getLogLink(targetSteam);
 				String msg = target + ": Last game: " + logLink;
+				System.out.println(logLink); //LOGGING
 				sendMessage(channel, msg);
 			}
 		}
@@ -119,6 +166,10 @@ public static String LAST_FM;
 		//DIV 
 		m = div.matcher(message);
 		if (m.find()) {
+			if ( !divB ) {
+				sendMessage(channel, "This command has been disabled");
+				return;
+			}
 			//getting steam from twitch
 			String target = m.group(2);	//group 2 = name
 			if ( target.equalsIgnoreCase("") ) { 
@@ -136,6 +187,10 @@ public static String LAST_FM;
 		//IP
 		m = ip.matcher(message);
 		if (m.find()) {
+			if ( !serverB ) {
+				sendMessage(channel, "This command has been disabled");
+				return;
+			}
 			//getting steam from twitch
 			String target = m.group(2);	//group 2 = name
 			if ( target.equals("") ){
@@ -153,6 +208,10 @@ public static String LAST_FM;
 		//HOURS
 		m = hours.matcher(message);
 		if ( m.find() ) {
+			if ( !hoursB ) {
+				sendMessage(channel, "This command has been disabled");
+				return;
+			}
 			String target = m.group(2);	
 			String game = m.group(3);
 			System.out.println(m.groupCount());
@@ -213,6 +272,75 @@ public static String LAST_FM;
 		//CONNECT 
 		if (conn.matcher(message).find()) {
 			sendMessage(channel, "Settings->Connections->Social->Steam");
+		}
+		
+		//TOGGLE
+		m = toggle.matcher(message);
+		if ( m.find() ){
+			String command = m.group(2);	//group 2 = command
+			if ( command.equalsIgnoreCase("") ) { 
+				sendMessage(channel, sender + ": no command provided");
+				return;
+			}
+			else{
+				if ( mods.contains(sender) ){
+					switch (command) {
+						case "profile":
+							profB = !profB;
+							if (!profB)
+								sendMessage(channel, sender + ": !profile has been disabled");
+							if (profB)
+								sendMessage(channel, sender + ": !profile has been enable");
+							break;
+						case "np":
+							npB = !npB;
+							if (!npB)
+								sendMessage(channel, sender + ": !profile has been disabled");
+							if (npB)
+								sendMessage(channel, sender + ": !profile has been enable");							
+							break;
+						case "stats":
+							statsB = !statsB;
+							if (!statsB)
+								sendMessage(channel, sender + ": !profile has been disabled");
+							if (statsB)
+								sendMessage(channel, sender + ": !profile has been enabled");
+							break;
+						case "log":
+							logB = !logB;
+							if (!logB)
+								sendMessage(channel, sender + ": !profile has been disabled");
+							if (logB)
+								sendMessage(channel, sender + ": !profile has been enabled");
+							break;
+						case "div":
+							divB = !divB;
+							if (!divB)
+								sendMessage(channel, sender + ": !profile has been disabled");
+							if (divB)
+								sendMessage(channel, sender + ": !profile has been enabled");
+							break;
+						case "server":
+							serverB = !serverB;
+							if (!serverB)
+								sendMessage(channel, sender + ": !profile has been disabled");
+							if (serverB)
+								sendMessage(channel, sender + ": !profile has been enabled");
+							break;
+						case "hours":
+							hoursB = !hoursB;
+							if (!hoursB)
+								sendMessage(channel, sender + ": !profile has been disabled");
+							if (hoursB)
+								sendMessage(channel, sender + ": !profile has been enabled");	
+							break;
+					}
+				}
+				else{
+					sendMessage(channel, sender + ": Sorry you are not a mod");
+					return;
+				}
+			}
 		}
 		
 		//COMMANDS 
