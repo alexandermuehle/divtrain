@@ -49,7 +49,7 @@ public static String LAST_FM;
     }
     
 	//react to private message
-	public void onPrivateMessage(String sender, String login, String hostname, String message) {
+	public void onPrivateMessage(String sender, String login, String hostname, String message) 
 		mods = message;
 		System.out.println("updated mods");
 	}
@@ -70,6 +70,7 @@ public static String LAST_FM;
 		if (m.find()) {
 			if ( !profB ) {
 				sendMessage(channel, "This command has been disabled");
+				System.out.println(channel + ": This command has been disabled (profile)"); //LOGGING
 				return;
 			}
 			//getting steam from twitch
@@ -81,7 +82,7 @@ public static String LAST_FM;
 			String targetSteam = getSteamFromTwitch(target, channel);
 			if ( !errorHandling(targetSteam, channel, target) ){
 				String msg = target + ": http://steamcommunity.com/profiles/" + targetSteam;
-				System.out.println("http://steamcommunity.com/profiles/" + targetSteam); //LOGGING
+				System.out.println(channel + ": http://steamcommunity.com/profiles/" + targetSteam); //LOGGING
 				sendMessage(channel, msg);
 			}
 		}
@@ -90,6 +91,7 @@ public static String LAST_FM;
 		if ( ( song.matcher(message).find()) || ( song2.matcher(message).find())) {
 			if ( !npB ) {
 				sendMessage(channel, "This command has been disabled");
+				System.out.println(channel + ": This command has been disabled (lastfm)"); //LOGGING
 				return;
 			}
 			String songInfo = getSongFromLastFM(LAST_FM);
@@ -99,7 +101,7 @@ public static String LAST_FM;
 			}
 			else{
 				msg = sender + ": Now playing: " + songInfo;
-				System.out.println(songInfo); //LOGGING
+				System.out.println(channel + ": " +songInfo); //LOGGING
 			}
 			
 			sendMessage(channel, msg);
@@ -111,6 +113,7 @@ public static String LAST_FM;
 		if (m.find()) {
 			if ( !statsB ) {
 				sendMessage(channel, "This command has been disabled");
+				System.out.println(channel + ": This command has been disabled (stats)"); //LOGGING
 				return;
 			}
 			//getting steam from twitch
@@ -128,15 +131,15 @@ public static String LAST_FM;
 			if ( !errorHandling(targetSteam, channel, target)){
 				if (game.equalsIgnoreCase("tf2")){
 					sendMessage(channel, target + ": http://logs.tf/profile/" + targetSteam);
-					System.out.println("http://logs.tf/profile/" + targetSteam);
+					System.out.println(channel + ": http://logs.tf/profile/" + targetSteam);
 				}
 			 	if (game.equalsIgnoreCase("dota2")){
 					sendMessage(channel, target + ": dotabuff.com/players/" + targetSteam);
-					System.out.println("dotabuff.com/players/" + targetSteam);
+					System.out.println(channel + ": dotabuff.com/players/" + targetSteam);
 				}
 				if (game.equalsIgnoreCase("csgo")){
 					sendMessage(channel, target + ": http://csgo-stats.com/" + targetSteam);
-					System.out.println("http://csgo-stats.com/" + targetSteam);
+					System.out.println(channel + ": http://csgo-stats.com/" + targetSteam);
 				}
 			}
 		}
@@ -146,6 +149,7 @@ public static String LAST_FM;
 		if (m.find()) {
 			if ( !logB ) {
 				sendMessage(channel, "This command has been disabled");
+				System.out.println(channel + ": This command has been disabled (log)"); //LOGGING
 				return;
 			}
 			//getting steam from twitch
@@ -158,8 +162,8 @@ public static String LAST_FM;
 			if ( !errorHandling(targetSteam, channel, target) ){
 				String logLink = getLogLink(targetSteam);
 				String msg = target + ": Last game: " + logLink;
-				System.out.println(logLink); //LOGGING
 				sendMessage(channel, msg);
+				System.out.println(channel + ": " + logLink); //LOGGING
 			}
 		}
 		
@@ -168,6 +172,7 @@ public static String LAST_FM;
 		if (m.find()) {
 			if ( !divB ) {
 				sendMessage(channel, "This command has been disabled");
+				System.out.println(channel + ": This command has been disabled (div)"); //LOGGING
 				return;
 			}
 			//getting steam from twitch
@@ -181,6 +186,7 @@ public static String LAST_FM;
 				String etf2lInfo = getDivFromETF2L(longToSteam(new Long(targetSteam)));
 				String msg = target + ": " + etf2lInfo;
 				sendMessage(channel, msg);
+				System.out.println(channel + ": " + etf2lInfo); //LOGGING
 			}
 		}
 		
@@ -189,6 +195,7 @@ public static String LAST_FM;
 		if (m.find()) {
 			if ( !serverB ) {
 				sendMessage(channel, "This command has been disabled");
+				System.out.println(channel + ": This command has been disabled (ip)"); //LOGGING
 				return;
 			}
 			//getting steam from twitch
@@ -201,6 +208,7 @@ public static String LAST_FM;
 			if ( !errorHandling(targetSteam, channel, target) ){
 				String IPInfo = getServerFromSteam(targetSteam);
 				String msg = target + ": Server Info: " + IPInfo;
+				System.out.println(channel + ": " + IPInfo); //LOGGING
 				sendMessage(channel, msg);
 			}
 		}
@@ -210,14 +218,12 @@ public static String LAST_FM;
 		if ( m.find() ) {
 			if ( !hoursB ) {
 				sendMessage(channel, "This command has been disabled");
+				System.out.println(channel + ": This command has been disabled (hours)"); //LOGGING
 				return;
 			}
 			String target = m.group(2);	
 			String game = m.group(3);
-			System.out.println(m.groupCount());
 
-			System.out.println(target);
-			System.out.println(game);
 			if ( target.equalsIgnoreCase("") ) { 
 				sendMessage(channel, sender + ": no name provided");
 				return;
@@ -240,11 +246,11 @@ public static String LAST_FM;
 						break;
 					case "dota2":
 						targetHours = getHoursFromSteam(targetSteam, 570, channel); // second arg is gameId (440=tf2)
-						msg = target + ": " + targetHours + "h played in Dota";
+						msgGame = "h played in Dota";
 						break;
 					case "csgo":
 						targetHours = getHoursFromSteam(targetSteam, 730, channel); // second arg is gameId (440=tf2)
-						msg = target + ": " + targetHours + "h played in CS:GO";
+						msgGame = "h played in CS:GO";
 						break;
 					default:
 						sendMessage(channel, sender + ": please specify the game you want hours of as follows: Dota 2 = dota2, TeamFortress 2 = tf2, CS:GO = csgo");
@@ -260,6 +266,7 @@ public static String LAST_FM;
 				else{
 					msg = target + ": " + targetHours + msgGame;
 					sendMessage(channel, msg);
+					System.out.println(channel + ": " + targetHours + msgGame); //LOGGING
 				}
 			}
 		}
@@ -267,6 +274,7 @@ public static String LAST_FM;
 		//CREDIT
 		if (credit.matcher(message).find()) {
 			sendMessage(channel, "This bot has been created by lexs. Please feel free to send feedback to: alexander.muhle@gmail.com");
+			System.out.println(channel + ": CREDIT"); //LOGGING
 		}
 		
 		//CONNECT 
@@ -283,8 +291,6 @@ public static String LAST_FM;
 				return;
 			}
 			else{
-				System.out.println(mods);
-				System.out.println(sender);
 				if ( mods.contains(sender) || channel.contains(sender) ){
 					switch (command) {
 						case "profile":
@@ -356,7 +362,6 @@ public static String LAST_FM;
 		//REQUEST
 		URLConnection connection = null;
 		String url = "http://logs.tf/json_search?player=" + targetSteam + "&limit=1";
-		System.out.println(url);
 		String result = "";		
 		String line = "";
 		try{
@@ -421,7 +426,6 @@ public static String LAST_FM;
 			return artistText + " - " + name;
 		}
 		catch(Exception e){
-			e.printStackTrace(System.out);
 			return "private";
 		}
 	}	
@@ -431,7 +435,6 @@ public static String LAST_FM;
 		//REQUEST
 		URLConnection connection = null;
 		String url = "http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=209970D697E121D8CCFB244B336585B9&steamids=" + targetSteam; //default is json
-		System.out.println(url);
 		String result = "";		
 		String line = "";
 		try{
@@ -480,7 +483,6 @@ public static String LAST_FM;
 		//REQUEST
 		URLConnection connection = null;
 		String url = "http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v0001/?key=209970D697E121D8CCFB244B336585B9&steamid=" + targetSteam; //default is json
-		System.out.println(url);
 		String result = "";		
 		String line = "";
 		try{
@@ -499,16 +501,13 @@ public static String LAST_FM;
 		try{
 			JSONObject steamJson = new JSONObject(result);
 			if ( steamJson.has("response") && !steamJson.isNull("response") ){
-				System.out.println("reached response");
+
 				JSONObject response = steamJson.getJSONObject("response");
 				JSONArray games = response.getJSONArray("games");
 
 				for (int i = 0; i < games.length(); i++){
 					JSONObject game = games.getJSONObject(i);
-					System.out.println(game);
-					System.out.println(game.getString("name"));
 					if ( game.getInt("appid") == gameId){
-						System.out.println(game.getInt("playtime_forever"));
 						int minutes = game.getInt("playtime_forever");
 						int hours = minutes / 60;
 						return Integer.toString(hours);
@@ -597,7 +596,6 @@ public static String LAST_FM;
 		long authserver = communityid % 2;
 		communityid = communityid-authserver;
 		long authid = communityid/2;
-		System.out.println(communityid);
 		return "0:"+authserver+":"+authid;
     }
     
