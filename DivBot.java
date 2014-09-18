@@ -87,6 +87,7 @@ public static String LAST_FM;
 					
 			Connection c = null;
 			Statement stmt = null;
+			Statement stmt2 = null;
 			int current = 0;
 			int bet = 0;
 			try {
@@ -101,11 +102,20 @@ public static String LAST_FM;
 				if ( m.group(3).equalsIgnoreCase("lose") )
 					current = -1;
 				bet = Integer.parseInt(m.group(2));
+				
+				stmt2 = c.createStatement();
+				ResultSet rs = stmt2.executeQuery( "SELECT * FROM USERS WHERE ID = " + sender + ";" );
+				while ( rs.next() ){
+					if ( rs.getInt("MONEY") < bet ){
+						sendMessage(channel, sender + ": You tried to bet more points (" + bet +") than you currently have");
+						return;
+					}
+				}
 				String sql = "INSERT OR REPLACE INTO USERS (ID, CURRENT, BET, MONEY) " +
 							 "VALUES ('" + sender + "', " 
 							 +  current + ", "  
 							 + 	bet + ", "
-							 +	"COALESCE((SELECT MONEY FROM USERS WHERE ID = '" + sender + "'), 2000)"
+							 +	"COALESCE((SELECT MONEY FROM USERS WHERE ID = '" + sender + "') - " + bet + ", 2000 - " + bet + ")"
 							 + 	");";
 				stmt.executeUpdate(sql);
 				stmt.close();
@@ -157,7 +167,7 @@ public static String LAST_FM;
 						//winning
 						ResultSet rs = stmt.executeQuery( "SELECT * FROM USERS WHERE CURRENT = " + right + ";" );
 						while ( rs.next() ) {
-							String sqlW = "UPDATE USERS set MONEY = (SELECT MONEY FROM USERS WHERE ID = '" + rs.getString("ID") + "') + " + rs.getInt("BET") + ";";
+							String sqlW = "UPDATE USERS set MONEY = (SELECT MONEY FROM USERS WHERE ID = '" + rs.getString("ID") + "') + " + rs.getInt("BET") + " * 2;";
 							stmt2.executeUpdate(sqlW);
 							c.commit();
 							sendMessage(channel, rs.getString("ID") + " won");
@@ -165,17 +175,6 @@ public static String LAST_FM;
 						rs.close();
 						stmt.close();
 						stmt2.close();
-						//losing
-						stmt = c.createStatement();
-						stmt2 = c.createStatement();
-						ResultSet rs2 = stmt.executeQuery( "SELECT * FROM USERS WHERE CURRENT = " + wrong + ";" );
-						while ( rs2.next() ) {
-							String sqlL = "UPDATE USERS set MONEY = (SELECT MONEY FROM USERS WHERE ID = '" + rs2.getString("ID") + "') - " + rs2.getInt("BET") + ";";
-							stmt2.executeUpdate(sqlL);
-							c.commit();
-						}
-						rs2.close();
-						stmt.close();
 						c.close();
 					} catch(Exception e){
 						System.err.println( e.getClass().getName() + ": " + e.getMessage() );
@@ -189,6 +188,9 @@ public static String LAST_FM;
 		if (m.find()) {
 			Connection c = null;
 			Statement stmt = null;
+			File f = new File("users.db");
+				if ( ! f.exists() )
+					createNewTable();
 			try {
 				Class.forName("org.sqlite.JDBC");
 				c = DriverManager.getConnection("jdbc:sqlite:users.db");
