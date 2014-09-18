@@ -12,6 +12,7 @@ import javax.xml.transform.*;
 import javax.xml.transform.dom.DOMSource; 
 import javax.xml.transform.stream.StreamResult; 
 import com.github.koraktor.steamcondenser.steam.servers.*;
+import java.sql.*;
 
 public class DivBot extends PircBot {
     
@@ -31,6 +32,10 @@ public static String LAST_FM;
 		public static Pattern conn = Pattern.compile("(!connect)\\s*\\z");
 		public static Pattern comm = Pattern.compile("(!command)");
 		public static Pattern toggle = Pattern.compile("(!toggle)\\s*(\\w*)\\s*\\z");
+		public static Pattern betting = Pattern.compile("(!bet)\\s*(\\d+)\\s+(\\w+)\\s*\\z");
+		public static Pattern oBetting = Pattern.compile("(!openbetting)\\s*\\z");
+		public static Pattern cBetting = Pattern.compile("(!closebetting)\\s+(\\w+)\\s*\\z");
+		public static Pattern points = Pattern.compile("(!points)\\s*\\z");
 		Matcher m;
 		
 		public String mods = "";
@@ -44,6 +49,7 @@ public static String LAST_FM;
 		public boolean serverB = true;
 		public boolean logB = true;
 		public boolean backB = true;
+		public boolean bettingB = false;
 		
 		
     public DivBot(String lastfm) {
@@ -66,6 +72,143 @@ public static String LAST_FM;
     // react to messages
     public void onMessage(String channel, String sender, String login, String hostname, String message) {
 		String channelName = channel.substring(1);
+		
+		//BETTING
+		m = betting.matcher(message);
+		if (m.find()){
+			if ( !bettingB ) {
+				sendMessage(channel, "Betting is not open at this time");
+				System.out.println(channel + ": This command has been disabled (betting)"); //LOGGING
+				return;
+			}
+			File f = new File("users.db");
+				if ( ! f.exists() )
+					createNewTable();
+					
+			Connection c = null;
+			Statement stmt = null;
+			int current = 0;
+			int bet = 0;
+			try {
+				Class.forName("org.sqlite.JDBC");
+				c = DriverManager.getConnection("jdbc:sqlite:users.db");
+				c.setAutoCommit(false);
+				System.out.println("Opened database successfully");
+
+				stmt = c.createStatement();
+				if ( m.group(3).equalsIgnoreCase("win") )
+					current = 1;
+				if ( m.group(3).equalsIgnoreCase("lose") )
+					current = -1;
+				bet = Integer.parseInt(m.group(2));
+				String sql = "INSERT OR REPLACE INTO USERS (ID, CURRENT, BET, MONEY) " +
+							 "VALUES ('" + sender + "', " 
+							 +  current + ", "  
+							 + 	bet + ", "
+							 +	"COALESCE((SELECT MONEY FROM USERS WHERE ID = '" + sender + "'), 2000)"
+							 + 	");";
+				stmt.executeUpdate(sql);
+				stmt.close();
+				c.commit();
+				c.close();
+				sendMessage(channel, sender + ": You have bet: " + bet + " on " + channelName + " winning his next game");
+			} catch(Exception e){
+				System.err.println( e.getClass().getName() + ": " + e.getMessage() );
+				return;
+			}
+		}
+		
+		//OPEN BETTING
+		m = oBetting.matcher(message);
+		if (m.find()) {
+			if ( mods.contains(sender) || channel.contains(sender) ){
+				bettingB = true;
+				sendMessage(channel, "Betting is now open");
+			}
+		}
+		
+		//CLOSE BETTING
+		m = cBetting.matcher(message);
+		if (m.find()) {
+			if ( mods.contains(sender) || channel.contains(sender) ){
+				bettingB = false;
+				int right = 0;
+				int wrong = 0;
+				
+				if (m.group(2).equalsIgnoreCase("win")){
+					right = 1;
+					wrong = 1;
+				}
+				if (m.group(2).equalsIgnoreCase("lose")){
+					right = -1;
+					wrong = 1;
+				}
+				    Connection c = null;
+					Statement stmt = null;
+					Statement stmt2 = null;
+					try {
+						Class.forName("org.sqlite.JDBC");
+						c = DriverManager.getConnection("jdbc:sqlite:users.db");
+						c.setAutoCommit(false);
+						System.out.println("Opened database successfully");
+						stmt = c.createStatement();
+						stmt2 = c.createStatement();
+						
+						//winning
+						ResultSet rs = stmt.executeQuery( "SELECT * FROM USERS WHERE CURRENT = " + right + ";" );
+						while ( rs.next() ) {
+							String sqlW = "UPDATE USERS set MONEY = (SELECT MONEY FROM USERS WHERE ID = '" + rs.getString("ID") + "') + " + rs.getInt("BET") + ";";
+							stmt2.executeUpdate(sqlW);
+							c.commit();
+							sendMessage(channel, rs.getString("ID") + " won");
+						}
+						rs.close();
+						stmt.close();
+						stmt2.close();
+						//losing
+						stmt = c.createStatement();
+						stmt2 = c.createStatement();
+						ResultSet rs2 = stmt.executeQuery( "SELECT * FROM USERS WHERE CURRENT = " + wrong + ";" );
+						while ( rs2.next() ) {
+							String sqlL = "UPDATE USERS set MONEY = (SELECT MONEY FROM USERS WHERE ID = '" + rs2.getString("ID") + "') - " + rs2.getInt("BET") + ";";
+							stmt2.executeUpdate(sqlL);
+							c.commit();
+						}
+						rs2.close();
+						stmt.close();
+						c.close();
+					} catch(Exception e){
+						System.err.println( e.getClass().getName() + ": " + e.getMessage() );
+						return;
+					}
+			}
+		}
+		
+		//POINTS
+		m = points.matcher(message);
+		if (m.find()) {
+			Connection c = null;
+			Statement stmt = null;
+			try {
+				Class.forName("org.sqlite.JDBC");
+				c = DriverManager.getConnection("jdbc:sqlite:users.db");
+				c.setAutoCommit(false);
+				System.out.println("Opened database successfully");
+
+				stmt = c.createStatement();
+				
+				ResultSet rs = stmt.executeQuery( "SELECT * FROM USERS WHERE ID = '" + sender + "';" );
+				while ( rs.next() ) {
+					sendMessage(channel, sender + ": You currently have " + rs.getInt("MONEY") + " points");
+				}
+				rs.close();
+				stmt.close();
+				c.close();
+			}catch(Exception e){
+				System.err.println( e.getClass().getName() + ": " + e.getMessage() );
+				return;
+			}
+		}
 		
 		//PROFILE
 		m = prof.matcher(message);
@@ -380,6 +523,31 @@ public static String LAST_FM;
 		if (comm.matcher(message).find()) {
 			sendMessage(channel, "Commands: !server || !stats [game] || !hours [game] || !profile || !log || !np || !credit");
 		}
+	}
+	
+	private void createNewTable(){
+		Connection c = null;
+		Statement stmt = null;
+		try {
+		  Class.forName("org.sqlite.JDBC");
+		  c = DriverManager.getConnection("jdbc:sqlite:users.db");
+		  System.out.println("Opened database successfully");
+
+		  stmt = c.createStatement();
+		  String sql = "CREATE TABLE USERS " +
+					   "(ID TEXT PRIMARY KEY     NOT NULL," +
+					   " CURRENT 		 INT	 NOT NULL," +
+					   " BET 			 INT	 NOT NULL," +
+					   " MONEY           REAL    NOT NULL)";
+					   
+		  stmt.executeUpdate(sql);
+		  stmt.close();
+		  c.close();
+		} catch ( Exception e ) {
+		  System.err.println( e.getClass().getName() + ": " + e.getMessage() );
+		  return;
+		}
+		System.out.println("Table created successfully");
 	}
 	
 	private String getLogLink(String targetSteam){
