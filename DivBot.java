@@ -104,7 +104,7 @@ public static String LAST_FM;
 				bet = Integer.parseInt(m.group(2));
 				
 				stmt2 = c.createStatement();
-				ResultSet rs = stmt2.executeQuery( "SELECT * FROM USERS WHERE ID = " + sender + ";" );
+				ResultSet rs = stmt2.executeQuery( "SELECT * FROM USERS WHERE ID = '" + sender + "';" );
 				while ( rs.next() ){
 					if ( rs.getInt("MONEY") < bet ){
 						sendMessage(channel, sender + ": You tried to bet more points (" + bet +") than you currently have");
