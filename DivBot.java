@@ -19,21 +19,21 @@ public class DivBot extends PircBot {
 public static String LAST_FM;
 		
 		//regex for !lookup name
-		public static Pattern prof = Pattern.compile("(!profile)\\s*\\z");
-		public static Pattern ip = Pattern.compile("(!server)\\s*\\z");
-		public static Pattern map = Pattern.compile("(!map)\\s*\\z");
-		public static Pattern song = Pattern.compile("(!song)\\s*\\z");
-		public static Pattern song2 = Pattern.compile("(!np)\\s*\\z");
-		public static Pattern hours = Pattern.compile("(!hours)\\s*(\\w*)\\s*\\z");
-		public static Pattern stats = Pattern.compile("(!stats)\\s*(\\w*)\\s*\\z");
-		public static Pattern log = Pattern.compile("(!log)\\s*\\z");
-		public static Pattern backpack = Pattern.compile("(!bp)\\s*\\z");
-		public static Pattern credit = Pattern.compile("(!credit)\\s*\\z");
-		public static Pattern conn = Pattern.compile("(!connect)\\s*\\z");
-		public static Pattern comm = Pattern.compile("(!command)");
-		public static Pattern toggle = Pattern.compile("(!toggle)\\s*(\\w*)\\s*\\z");
-		public static Pattern betting = Pattern.compile("(!bet)\\s*(\\d+)\\s+(\\w+)\\s*\\z");
-		public static Pattern oBetting = Pattern.compile("(!openbetting)\\s*\\z");
+		public static Pattern prof = Pattern.compile("^(!profile)");
+		public static Pattern ip = Pattern.compile("^(!server)");
+		public static Pattern map = Pattern.compile("^(!map)");
+		public static Pattern song = Pattern.compile("^(!song)");
+		public static Pattern song2 = Pattern.compile("^(!np)");
+		public static Pattern hours = Pattern.compile("^(!hours)\\s*(\\w*)");
+		public static Pattern stats = Pattern.compile("^(!stats)\\s*(\\w*)");
+		public static Pattern log = Pattern.compile("^(!log)");
+		public static Pattern backpack = Pattern.compile("^(!bp)");
+		public static Pattern credit = Pattern.compile("^(!credit)");
+		public static Pattern conn = Pattern.compile("^(!connect)");
+		public static Pattern comm = Pattern.compile("^(!command)");
+		public static Pattern toggle = Pattern.compile("^(!toggle)\\s*(\\w*)\\s*\\z");
+		public static Pattern betting = Pattern.compile("^(!bet)\\s*(\\d+)\\s+(\\w+)\\s*\\z");
+		public static Pattern oBetting = Pattern.compile("^(!openbetting)\\s*\\z");
 		public static Pattern cBetting = Pattern.compile("(!closebetting)\\s*\\z");
 		public static Pattern rBetting = Pattern.compile("(!result)\\s+(\\w+)\\s*\\z");
 		public static Pattern points = Pattern.compile("(!points)\\s*\\z");
@@ -135,10 +135,13 @@ public static String LAST_FM;
 		//OPEN BETTING
 		m = oBetting.matcher(message);
 		if (m.find()) {
-			if ( mods.contains(sender) || channel.contains(sender) ){
+			if ( channel.contains(sender) ){
 				bettingB = true;
 				sendMessage(channel, "Betting is now open");
 			}
+            else{
+                sendMessage(channel, "Only the owner of the channel can open/close bets");            
+            }
 		}
 		
 		//CLOSE BETTING
@@ -148,6 +151,9 @@ public static String LAST_FM;
 				bettingB = false;
 				sendMessage(channel, "Betting is now closed");
 			}
+            else{
+                sendMessage(channel, "Only the owner of the channel can open/close bets");
+            }
 		}
 		
 		//CLOSE BETTING
@@ -201,6 +207,7 @@ public static String LAST_FM;
 		if (m.find()) {
 			Connection c = null;
 			Statement stmt = null;
+            Statement stmt2 = null;
 			File f = new File("users.db");
 				if ( ! f.exists() )
 					createNewTable();
@@ -211,13 +218,22 @@ public static String LAST_FM;
 				System.out.println("Opened database successfully");
 
 				stmt = c.createStatement();
-				
+                stmt2 = c.createStatement();
+				String sql = "INSERT OR IGNORE INTO USERS (ID, CURRENT, BET, MONEY) " +
+                                 "VALUES ('" + sender
+                             + "', 0"
+                             +  ", 0"
+                             +  ", 2000"
+                             +  ");";
+                stmt2.executeUpdate(sql);
 				ResultSet rs = stmt.executeQuery( "SELECT * FROM USERS WHERE ID = '" + sender + "';" );
 				while ( rs.next() ) {
 					sendMessage(channel, sender + ": You currently have " + rs.getInt("MONEY") + " points");
-				}
+                }
 				rs.close();
 				stmt.close();
+                stmt2.close();
+                c.commit();
 				c.close();
 			}catch(Exception e){
 				System.err.println( e.getClass().getName() + ": " + e.getMessage() );
