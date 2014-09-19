@@ -34,7 +34,8 @@ public static String LAST_FM;
 		public static Pattern toggle = Pattern.compile("(!toggle)\\s*(\\w*)\\s*\\z");
 		public static Pattern betting = Pattern.compile("(!bet)\\s*(\\d+)\\s+(\\w+)\\s*\\z");
 		public static Pattern oBetting = Pattern.compile("(!openbetting)\\s*\\z");
-		public static Pattern cBetting = Pattern.compile("(!closebetting)\\s+(\\w+)\\s*\\z");
+		public static Pattern cBetting = Pattern.compile("(!closebetting)\\s*\\z");
+		public static Pattern rBetting = Pattern.compile("(!result)\\s+(\\w+)\\s*\\z");
 		public static Pattern points = Pattern.compile("(!points)\\s*\\z");
 		Matcher m;
 		
@@ -142,6 +143,15 @@ public static String LAST_FM;
 		
 		//CLOSE BETTING
 		m = cBetting.matcher(message);
+		if (m.find()) {
+			if ( mods.contains(sender) || channel.contains(sender) ){
+				bettingB = false;
+				sendMessage(channel, "Betting is now closed");
+			}
+		}
+		
+		//CLOSE BETTING
+		m = rBetting.matcher(message);
 		if (m.find()) {
 			if ( mods.contains(sender) || channel.contains(sender) ){
 				bettingB = false;
