@@ -108,6 +108,8 @@ public static String LAST_FM;
 				while ( rs.next() ){
 					if ( rs.getInt("MONEY") < bet ){
 						sendMessage(channel, sender + ": You tried to bet more points (" + bet +") than you currently have");
+						stmt2.close();
+						c.close();
 						return;
 					}
 				}
@@ -119,6 +121,7 @@ public static String LAST_FM;
 							 + 	");";
 				stmt.executeUpdate(sql);
 				stmt.close();
+				stmt2.close();
 				c.commit();
 				c.close();
 				sendMessage(channel, sender + ": You have bet: " + bet + " on " + channelName + " winning his next game");
