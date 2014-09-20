@@ -33,10 +33,12 @@ public static String LAST_FM;
 		public static Pattern comm = Pattern.compile("^(!command)");
 		public static Pattern toggle = Pattern.compile("^(!toggle)\\s*(\\w*)\\s*\\z");
 		public static Pattern betting = Pattern.compile("^(!bet)\\s*(\\d+)\\s+(\\w+)\\s*\\z");
-		public static Pattern oBetting = Pattern.compile("^(!openbetting)\\s*\\z");
-		public static Pattern cBetting = Pattern.compile("(!closebetting)\\s*\\z");
-		public static Pattern rBetting = Pattern.compile("(!result)\\s+(\\w+)\\s*\\z");
-		public static Pattern points = Pattern.compile("(!points)\\s*\\z");
+		public static Pattern oBetting = Pattern.compile("^(!openbetting)");
+		public static Pattern cBetting = Pattern.compile("^(!closebetting)");
+		public static Pattern rBetting = Pattern.compile("^(!result)\\s+(\\w+)");
+		public static Pattern points = Pattern.compile("^(!points)");
+        public static Pattern balance = Pattern.compile("^(!balance)");
+        public static Pattern mybalance = Pattern.compile("^(!mybalance)");
 		Matcher m;
 		
 		public String mods = "";
@@ -51,6 +53,7 @@ public static String LAST_FM;
 		public boolean logB = true;
 		public boolean backB = true;
 		public boolean bettingB = false;
+        public boolean pointsB = true;
 		
 		
     public DivBot(String lastfm) {
@@ -89,6 +92,7 @@ public static String LAST_FM;
 			Connection c = null;
 			Statement stmt = null;
 			Statement stmt2 = null;
+            Statement stmt3 = null;
 			int current = 0;
 			int bet = 0;
 			try {
@@ -102,18 +106,35 @@ public static String LAST_FM;
 					current = 1;
 				if ( m.group(3).equalsIgnoreCase("lose") )
 					current = -1;
+
 				bet = Integer.parseInt(m.group(2));
 				
 				stmt2 = c.createStatement();
+                stmt3 = c.createStatement();
 				ResultSet rs = stmt2.executeQuery( "SELECT * FROM USERS WHERE ID = '" + sender + "';" );
-				while ( rs.next() ){
+				if ( rs.next() ){
+                    if ( rs.getInt("CURRENT") != 0 ){
+                        String sqlReset = "UPDATE USERS set MONEY = " + Integer.toString(rs.getInt("MONEY") + rs.getInt("BET")) + " WHERE ID = '" + sender + "';";
+                        stmt3.executeUpdate(sqlReset);
+                        stmt3.close();
+                        stmt2.close();
+                        c.commit();
+                    }
 					if ( rs.getInt("MONEY") < bet ){
-						sendMessage(channel, sender + ": You tried to bet more points (" + bet +") than you currently have");
+						sendMessage(channel, sender + ": You tried to bet more points (" + bet +") than you currently have (" + Integer.toString(rs.getInt("MONEY")) + ")");
 						stmt2.close();
 						c.close();
 						return;
 					}
 				}
+                else{
+                    if ( bet > 2000 ){
+                        sendMessage(channel, sender + ": You tried to bet more points (" + bet + ") than you currently have (2000)");                
+                        stmt2.close();
+                        c.close();
+                        return;
+                    }
+                }
 				String sql = "INSERT OR REPLACE INTO USERS (ID, CURRENT, BET, MONEY) " +
 							 "VALUES ('" + sender + "', " 
 							 +  current + ", "  
@@ -125,7 +146,7 @@ public static String LAST_FM;
 				stmt2.close();
 				c.commit();
 				c.close();
-				sendMessage(channel, sender + ": You have bet: " + bet + " on " + channelName + " winning his next game");
+//				sendMessage(channel, sender + ": You have bet: " + bet + " on " + channelName + " winning his next game");
 			} catch(Exception e){
 				System.err.println( e.getClass().getName() + ": " + e.getMessage() );
 				return;
@@ -135,7 +156,7 @@ public static String LAST_FM;
 		//OPEN BETTING
 		m = oBetting.matcher(message);
 		if (m.find()) {
-			if ( channel.contains(sender) ){
+			if ( channelName.equalsIgnoreCase(sender) || sender.equalsIgnoreCase("lexsoor") ){
 				bettingB = true;
 				sendMessage(channel, "Betting is now open");
 			}
@@ -147,7 +168,7 @@ public static String LAST_FM;
 		//CLOSE BETTING
 		m = cBetting.matcher(message);
 		if (m.find()) {
-			if ( mods.contains(sender) || channel.contains(sender) ){
+			if ( channelName.equalsIgnoreCase(sender) || sender.equalsIgnoreCase("lexsoor") ){
 				bettingB = false;
 				sendMessage(channel, "Betting is now closed");
 			}
@@ -156,10 +177,10 @@ public static String LAST_FM;
             }
 		}
 		
-		//CLOSE BETTING
+		//RESULT BETTING
 		m = rBetting.matcher(message);
 		if (m.find()) {
-			if ( mods.contains(sender) || channel.contains(sender) ){
+			if (  channelName.equalsIgnoreCase(sender) || sender.equalsIgnoreCase("lexsoor") ){
 				bettingB = false;
 				int right = 0;
 				int wrong = 0;
@@ -175,6 +196,8 @@ public static String LAST_FM;
 				    Connection c = null;
 					Statement stmt = null;
 					Statement stmt2 = null;
+                    Statement stmt3 = null;
+                    Statement stmt4 = null;
 					try {
 						Class.forName("org.sqlite.JDBC");
 						c = DriverManager.getConnection("jdbc:sqlite:users.db");
@@ -182,19 +205,42 @@ public static String LAST_FM;
 						System.out.println("Opened database successfully");
 						stmt = c.createStatement();
 						stmt2 = c.createStatement();
-						
+                        stmt3 = c.createStatement();
+                        stmt4 = c.createStatement();
+						sendMessage(channel, "Points are being updated");
+                        pointsB = false;
 						//winning
 						ResultSet rs = stmt.executeQuery( "SELECT * FROM USERS WHERE CURRENT = " + right + ";" );
 						while ( rs.next() ) {
-							String sqlW = "UPDATE USERS set MONEY = (SELECT MONEY FROM USERS WHERE ID = '" + rs.getString("ID") + "') + " + rs.getInt("BET") + " * 2;";
+                            int newMoney = rs.getInt("MONEY") + rs.getInt("BET") + rs.getInt("BET");
+                            System.out.println(Integer.toString(newMoney));
+                            String sqlW = "UPDATE USERS set MONEY = " + Integer.toString(newMoney) + ", BET = 0, CURRENT = 0 WHERE ID = '" + sender + "';";
+                            System.out.println(sqlW);
 							stmt2.executeUpdate(sqlW);
-							c.commit();
-							sendMessage(channel, rs.getString("ID") + " won");
+                            c.commit();
+							System.out.println( rs.getString("ID") + " won" );
 						}
+                        ResultSet rr = stmt3.executeQuery( "SELECT * FROM USERS WHERE CURRENT = " + wrong + ";" );
+                        while ( rr.next() ) {
+                            int newMoney = rr.getInt("MONEY");
+                            if ( rr.getInt("MONEY") == 0 ){
+                                newMoney = 69;
+                                sendMessage(channel, rr.getString("ID") + ": You had to be bailed out, you have 69 points again!");
+                            }
+                            String sqlL = "UPDATE USERS set MONEY = " + Integer.toString(newMoney) + ", BET = 0, CURRENT = 0 WHERE ID = '" + sender + "';";
+                            stmt4.executeUpdate(sqlL);
+                            c.commit();
+                            System.out.println( rr.getString("ID") + " lost" );
+                        }
 						rs.close();
+                        rr.close();
 						stmt.close();
 						stmt2.close();
+                        stmt3.close();
+                        stmt4.close();
 						c.close();
+                        sendMessage(channel, "Points have been updated");
+                        pointsB = true;
 					} catch(Exception e){
 						System.err.println( e.getClass().getName() + ": " + e.getMessage() );
 						return;
@@ -203,11 +249,14 @@ public static String LAST_FM;
 		}
 		
 		//POINTS
-		m = points.matcher(message);
-		if (m.find()) {
+		if ( ( points.matcher(message).find()) || (balance.matcher(message).find()) || (mybalance.matcher(message).find())) {
 			Connection c = null;
 			Statement stmt = null;
             Statement stmt2 = null;
+            if ( !pointsB ){
+                sendMessage(channel, "Points are being updated");
+                return;
+            }
 			File f = new File("users.db");
 				if ( ! f.exists() )
 					createNewTable();
@@ -226,9 +275,10 @@ public static String LAST_FM;
                              +  ", 2000"
                              +  ");";
                 stmt2.executeUpdate(sql);
+                c.commit();
 				ResultSet rs = stmt.executeQuery( "SELECT * FROM USERS WHERE ID = '" + sender + "';" );
 				while ( rs.next() ) {
-					sendMessage(channel, sender + ": You currently have " + rs.getInt("MONEY") + " points");
+					sendMessage(channel, sender + ": You currently have " + rs.getInt("MONEY") + " points with " + Integer.toString(rs.getInt("BET")) + " open in bets");
                 }
 				rs.close();
 				stmt.close();
