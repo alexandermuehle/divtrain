@@ -260,6 +260,33 @@ public static String LAST_FM;
 			}
 		}
 		
+		//LEADERBOARD
+		m = leader.matcher(message);
+		if (m.find()) {
+			Connection c = null;
+			Statement stmt = null;
+			try {
+				Class.forName("org.sqlite.JDBC");
+				c = DriverManager.getConnection("jdbc:sqlite:users.db");
+				c.setAutoCommit(false);
+				System.out.println("Opened database successfully");
+				stmt = c.createStatement();
+				ResultSet rs = stmt.executeQuery( "SELECT * FROM USERS ORDER BY MONEY DESC;" );
+				int i = 1;
+				while ( rs.next() ) {
+					sendMessage(channel, i + ": " + rs.getString("ID") + " with " + rs.getInt("MONEY") + " points");
+					i++;
+					if ( i > 3 ) break;
+				}
+				rs.close();
+				stmt.close();
+				c.close();
+			}catch(Exception e){
+				System.err.println( e.getClass().getName() + ": " + e.getMessage() );
+				return;
+			}
+		}
+		
 		//POINTS
 		if ( ( points.matcher(message).find()) || (balance.matcher(message).find()) || (mybalance.matcher(message).find())) {
 			Connection c = null;
@@ -269,9 +296,6 @@ public static String LAST_FM;
                 sendMessage(channel, "Points are being updated");
                 return;
             }
-			File f = new File("users.db");
-				if ( ! f.exists() )
-					createNewTable();
 			try {
 				Class.forName("org.sqlite.JDBC");
 				c = DriverManager.getConnection("jdbc:sqlite:users.db");
