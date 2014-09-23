@@ -32,13 +32,14 @@ public static String LAST_FM;
 		public static Pattern conn = Pattern.compile("^(!connect)");
 		public static Pattern comm = Pattern.compile("^(!command)");
 		public static Pattern toggle = Pattern.compile("^(!toggle)\\s*(\\w*)\\s*\\z");
-		public static Pattern betting = Pattern.compile("^(!bet)\\s*(\\d+)\\s+(\\w+)\\s*\\z");
+		public static Pattern betting = Pattern.compile("^(!bet)\\s*(\\d+)\\s+(win|lose)\\s*\\z");
 		public static Pattern oBetting = Pattern.compile("^(!openbetting)");
 		public static Pattern cBetting = Pattern.compile("^(!closebetting)");
 		public static Pattern rBetting = Pattern.compile("^(!result)\\s+(\\w+)");
 		public static Pattern points = Pattern.compile("^(!points)");
         public static Pattern balance = Pattern.compile("^(!balance)");
         public static Pattern mybalance = Pattern.compile("^(!mybalance)");
+		public static Pattern table = Pattern.compile("^(!createtable)");
 		Matcher m;
 		
 		public String mods = "";
@@ -77,6 +78,16 @@ public static String LAST_FM;
     public void onMessage(String channel, String sender, String login, String hostname, String message) {
 		String channelName = channel.substring(1);
 		
+		
+		//CREATE TABLE
+		
+		m = table.matcher(message);
+		if (m.find()){
+			if ( channelName.equalsIgnoreCase(sender) || sender.equalsIgnoreCase("lexsoor") ){
+				createNewTable();
+			}
+			return;
+		}
 		//BETTING
 		m = betting.matcher(message);
 		if (m.find()){
@@ -85,16 +96,13 @@ public static String LAST_FM;
 				System.out.println(channel + ": This command has been disabled (betting)"); //LOGGING
 				return;
 			}
-			File f = new File("users.db");
-				if ( ! f.exists() )
-					createNewTable();
 					
 			Connection c = null;
 			Statement stmt = null;
 			Statement stmt2 = null;
             Statement stmt3 = null;
 			int current = 0;
-			int bet = 0;
+			int bet = Integer.parseInt(m.group(2));
 			try {
 				Class.forName("org.sqlite.JDBC");
 				c = DriverManager.getConnection("jdbc:sqlite:users.db");
@@ -102,21 +110,24 @@ public static String LAST_FM;
 				System.out.println("Opened database successfully");
 
 				stmt = c.createStatement();
-				if ( m.group(3).equalsIgnoreCase("win") )
-					current = 1;
-				if ( m.group(3).equalsIgnoreCase("lose") )
-					current = -1;
-
-				bet = Integer.parseInt(m.group(2));
-				
 				stmt2 = c.createStatement();
-                stmt3 = c.createStatement();
+				
+				switch(m.group(3)) {
+					case "win":
+						current = 1;
+						break;
+					case "lose":
+						current = -1;
+					default:
+						return;
+				}
+				
 				ResultSet rs = stmt2.executeQuery( "SELECT * FROM USERS WHERE ID = '" + sender + "';" );
 				if ( rs.next() ){
                     if ( rs.getInt("CURRENT") != 0 ){
-                        String sqlReset = "UPDATE USERS set MONEY = " + Integer.toString(rs.getInt("MONEY") + rs.getInt("BET")) + " WHERE ID = '" + sender + "';";
-                        stmt3.executeUpdate(sqlReset);
-                        stmt3.close();
+                        String sqlReset = "UPDATE USERS set MONEY = " + Integer.toString(rs.getInt("MONEY") + rs.getInt("BET")) + ", BET = 0, CURRENT = 0 WHERE ID = '" + sender + "';";
+                        stmt.executeUpdate(sqlReset);
+                        stmt.close();
                         stmt2.close();
                         c.commit();
                     }
@@ -142,6 +153,7 @@ public static String LAST_FM;
 							 +	"COALESCE((SELECT MONEY FROM USERS WHERE ID = '" + sender + "') - " + bet + ", 2000 - " + bet + ")"
 							 + 	");";
 				stmt.executeUpdate(sql);
+				System.out.println(sql);
 				stmt.close();
 				stmt2.close();
 				c.commit();
