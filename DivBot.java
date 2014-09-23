@@ -226,7 +226,7 @@ public static String LAST_FM;
 						while ( rs.next() ) {
                             int newMoney = rs.getInt("MONEY") + rs.getInt("BET") + rs.getInt("BET");
                             System.out.println(Integer.toString(newMoney));
-                            String sqlW = "UPDATE USERS set MONEY = " + Integer.toString(newMoney) + ", BET = 0, CURRENT = 0 WHERE ID = '" + sender + "';";
+                            String sqlW = "UPDATE USERS set MONEY = " + Integer.toString(newMoney) + ", BET = 0, CURRENT = 0 WHERE ID = '" + rs.getString("ID") + "';";
                             System.out.println(sqlW);
 							stmt2.executeUpdate(sqlW);
                             c.commit();
@@ -239,7 +239,7 @@ public static String LAST_FM;
                                 newMoney = 69;
                                 sendMessage(channel, rr.getString("ID") + ": You had to be bailed out, you have 69 points again!");
                             }
-                            String sqlL = "UPDATE USERS set MONEY = " + Integer.toString(newMoney) + ", BET = 0, CURRENT = 0 WHERE ID = '" + sender + "';";
+                            String sqlL = "UPDATE USERS set MONEY = " + Integer.toString(newMoney) + ", BET = 0, CURRENT = 0 WHERE ID = '" + rs.getString("ID") + "';";
                             stmt4.executeUpdate(sqlL);
                             c.commit();
                             System.out.println( rr.getString("ID") + " lost" );
