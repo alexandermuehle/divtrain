@@ -40,6 +40,7 @@ public static String LAST_FM;
         public static Pattern balance = Pattern.compile("^(!balance)");
         public static Pattern mybalance = Pattern.compile("^(!mybalance)");
 		public static Pattern table = Pattern.compile("^(!createtable)");
+		public static Pattern leader = Pattern.compile("^(!leaderboard)");
 		Matcher m;
 		
 		public String mods = "";
@@ -275,6 +276,7 @@ public static String LAST_FM;
 				int i = 1;
 				while ( rs.next() ) {
 					sendMessage(channel, i + ": " + rs.getString("ID") + " with " + rs.getInt("MONEY") + " points");
+					System.out.println(i + ": " + rs.getString("ID") + " with " + rs.getInt("MONEY") + " points");
 					i++;
 					if ( i > 3 ) break;
 				}
