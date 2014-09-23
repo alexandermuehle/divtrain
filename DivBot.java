@@ -119,6 +119,7 @@ public static String LAST_FM;
 						break;
 					case "lose":
 						current = -1;
+						break;
 					default:
 						return;
 				}
@@ -200,7 +201,7 @@ public static String LAST_FM;
 				
 				if (m.group(2).equalsIgnoreCase("win")){
 					right = 1;
-					wrong = 1;
+					wrong = -1;
 				}
 				if (m.group(2).equalsIgnoreCase("lose")){
 					right = -1;
