@@ -32,7 +32,7 @@ public static String LAST_FM;
 		public static Pattern conn = Pattern.compile("^(!connect)\\b");
 		public static Pattern comm = Pattern.compile("^(!command)\\b");
 		public static Pattern toggle = Pattern.compile("^(!toggle)\\s*(\\w*)\\s*\\z");
-		public static Pattern betting = Pattern.compile("^(!bet)\\s*(\\d+)\\s+(win|lose)\\s*\\z");
+		public static Pattern betting = Pattern.compile("^(!bet)\\s*(\\d+|allin)\\s+(win|lose)\\s*\\z");
 		public static Pattern oBetting = Pattern.compile("^(!openbetting)\\b");
 		public static Pattern cBetting = Pattern.compile("^(!closebetting)\\b");
 		public static Pattern rBetting = Pattern.compile("^(!result)\\s+(\\w+)");
@@ -41,9 +41,12 @@ public static String LAST_FM;
         public static Pattern mybalance = Pattern.compile("^(!mybalance)\\b");
 		public static Pattern table = Pattern.compile("^(!createtable)\\b");
 		public static Pattern leader = Pattern.compile("^(!leaderboard)\\b");
+		public static Pattern prizepool = Pattern.compile("^(!prizepool)");
 		Matcher m;
 		
 		public String mods = "";
+		
+		public int prizepool = 0;
 		
 		//permission boolean
 		public boolean profB = true;
@@ -103,7 +106,9 @@ public static String LAST_FM;
 			Statement stmt2 = null;
             Statement stmt3 = null;
 			int current = 0;
-			int bet = Integer.parseInt(m.group(2));
+			int bet = 0;
+			if ( m.group(2).equals("allin") ) bet = -1;
+			bet = Integer.parseInt(m.group(2));
 			try {
 				Class.forName("org.sqlite.JDBC");
 				c = DriverManager.getConnection("jdbc:sqlite:users.db");
@@ -112,9 +117,7 @@ public static String LAST_FM;
 
 				stmt = c.createStatement();
 				stmt2 = c.createStatement();
-
 				stmt3 = c.createStatement();
-                stmt3 = c.createStatement();
 				
 				switch(m.group(3)) {
 					case "win":
@@ -129,8 +132,10 @@ public static String LAST_FM;
 				
 				ResultSet rs = stmt2.executeQuery( "SELECT * FROM USERS WHERE ID = '" + sender + "';" );
 				if ( rs.next() ){
+					if ( bet == -1 ) bet = rs.getInt("MONEY");
                     if ( rs.getInt("CURRENT") != 0 ){
                         String sqlReset = "UPDATE USERS set MONEY = " + Integer.toString(rs.getInt("MONEY") + rs.getInt("BET")) + ", BET = 0, CURRENT = 0 WHERE ID = '" + sender + "';";
+						prizepool -= bet;
                         stmt3.executeUpdate(sqlReset);
                         stmt3.close();
                         stmt2.close();
@@ -144,6 +149,7 @@ public static String LAST_FM;
 					}
 				}
                 else{
+					if ( bet == -1 ) bet = 2000;
                     if ( bet > 2000 ){
                         sendMessage(channel, sender + ": You tried to bet more points (" + bet + ") than you currently have (2000)");                
                         stmt2.close();
@@ -157,6 +163,7 @@ public static String LAST_FM;
 							 + 	bet + ", "
 							 +	"COALESCE((SELECT MONEY FROM USERS WHERE ID = '" + sender + "') - " + bet + ", 2000 - " + bet + ")"
 							 + 	");";
+				prizepool += bet;
 				stmt.executeUpdate(sql);
 				System.out.println(sql);
 				stmt.close();
@@ -169,6 +176,7 @@ public static String LAST_FM;
 				return;
 			}
 		}
+
 		
 		//OPEN BETTING
 		m = oBetting.matcher(message);
@@ -188,6 +196,25 @@ public static String LAST_FM;
 			if ( channelName.equalsIgnoreCase(sender) || sender.equalsIgnoreCase("lexsoor") ){
 				bettingB = false;
 				sendMessage(channel, "Betting is now closed");
+				Connection c = null;
+				Statement stmt = null;
+				try {
+					Class.forName("org.sqlite.JDBC");
+					c = DriverManager.getConnection("jdbc:sqlite:users.db");
+					c.setAutoCommit(false);
+					System.out.println("Opened database successfully");
+					stmt = c.createStatement();				
+					//number of players
+					ResultSet countPlayers = stmt.executeQuery("SELECT COUNT(*) AS total FROM USERS WHERE CURRENT = -1 or CURRENT = 1;");
+					int numberOfPlayers = countPlayers.getInt(1);
+					stmt.close();
+					countPlayers.close();
+					c.close();
+					sendMessage(channel, "Current prizepool: " + prizepool + " with " + numberOfPlayers + " people betting");
+				} catch(Exception e){
+					System.err.println( e.getClass().getName() + ": " + e.getMessage() );
+					return;
+				}
 			}
             else{
                 sendMessage(channel, "Only the owner of the channel can open/close bets");
