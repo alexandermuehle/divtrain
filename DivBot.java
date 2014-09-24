@@ -112,6 +112,7 @@ public static String LAST_FM;
 
 				stmt = c.createStatement();
 				stmt2 = c.createStatement();
+				stmt3 = c.createStatement();
 				
 				switch(m.group(3)) {
 					case "win":
@@ -128,8 +129,8 @@ public static String LAST_FM;
 				if ( rs.next() ){
                     if ( rs.getInt("CURRENT") != 0 ){
                         String sqlReset = "UPDATE USERS set MONEY = " + Integer.toString(rs.getInt("MONEY") + rs.getInt("BET")) + ", BET = 0, CURRENT = 0 WHERE ID = '" + sender + "';";
-                        stmt.executeUpdate(sqlReset);
-                        stmt.close();
+                        stmt3.executeUpdate(sqlReset);
+                        stmt3.close();
                         stmt2.close();
                         c.commit();
                     }
