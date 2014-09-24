@@ -241,7 +241,8 @@ public static String LAST_FM;
                                 newMoney = 69;
                                 sendMessage(channel, rr.getString("ID") + ": You had to be bailed out, you have 69 points again!");
                             }
-                            String sqlL = "UPDATE USERS set MONEY = " + Integer.toString(newMoney) + ", BET = 0, CURRENT = 0 WHERE ID = '" + rs.getString("ID") + "';";
+                            String sqlL = "UPDATE USERS set MONEY = " + Integer.toString(newMoney) + ", BET = 0, CURRENT = 0 WHERE ID = '" + rr.getString("ID") + "';";
+                            System.out.println(sqlL);
                             stmt4.executeUpdate(sqlL);
                             c.commit();
                             System.out.println( rr.getString("ID") + " lost" );
