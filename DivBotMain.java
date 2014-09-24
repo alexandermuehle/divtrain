@@ -8,7 +8,7 @@ public class DivBotMain {
         DivBot bot = new DivBot(args[1]);	
         
         // Enable debugging output.
-        bot.setVerbose(true);
+        bot.setVerbose(false);
         
         // Connect to the IRC server.
         bot.connect("irc.twitch.tv", 6667, "oauth:3hqvqc36tssr6v7jtn9npk3sejj2l5r");

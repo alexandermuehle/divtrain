@@ -19,28 +19,28 @@ public class DivBot extends PircBot {
 public static String LAST_FM;
 		
 		//regex for !lookup name
-		public static Pattern prof = Pattern.compile("^(!profile)");
-		public static Pattern ip = Pattern.compile("^(!server)");
-		public static Pattern map = Pattern.compile("^(!map)");
-		public static Pattern song = Pattern.compile("^(!song)");
-		public static Pattern song2 = Pattern.compile("^(!np)");
-		public static Pattern hours = Pattern.compile("^(!hours)\\s*(\\w*)");
-		public static Pattern stats = Pattern.compile("^(!stats)\\s*(\\w*)");
-		public static Pattern log = Pattern.compile("^(!log)");
-		public static Pattern backpack = Pattern.compile("^(!bp)");
-		public static Pattern credit = Pattern.compile("^(!credit)");
-		public static Pattern conn = Pattern.compile("^(!connect)");
-		public static Pattern comm = Pattern.compile("^(!command)");
+		public static Pattern prof = Pattern.compile("^(!profile)\\b");
+		public static Pattern ip = Pattern.compile("^(!server)\\b");
+		public static Pattern map = Pattern.compile("^(!map)\\b");
+		public static Pattern song = Pattern.compile("^(!song)\\b");
+		public static Pattern song2 = Pattern.compile("^(!np)\\b");
+		public static Pattern hours = Pattern.compile("^(!hours)\\s*(\\w*)\\b");
+		public static Pattern stats = Pattern.compile("^(!stats)\\s*(\\w*)\\b");
+		public static Pattern log = Pattern.compile("^(!log)\\b");
+		public static Pattern backpack = Pattern.compile("^(!bp)\\b");
+		public static Pattern credit = Pattern.compile("^(!credit)\\b");
+		public static Pattern conn = Pattern.compile("^(!connect)\\b");
+		public static Pattern comm = Pattern.compile("^(!command)\\b");
 		public static Pattern toggle = Pattern.compile("^(!toggle)\\s*(\\w*)\\s*\\z");
 		public static Pattern betting = Pattern.compile("^(!bet)\\s*(\\d+)\\s+(win|lose)\\s*\\z");
-		public static Pattern oBetting = Pattern.compile("^(!openbetting)");
-		public static Pattern cBetting = Pattern.compile("^(!closebetting)");
+		public static Pattern oBetting = Pattern.compile("^(!openbetting)\\b");
+		public static Pattern cBetting = Pattern.compile("^(!closebetting)\\b");
 		public static Pattern rBetting = Pattern.compile("^(!result)\\s+(\\w+)");
-		public static Pattern points = Pattern.compile("^(!points)");
-        public static Pattern balance = Pattern.compile("^(!balance)");
-        public static Pattern mybalance = Pattern.compile("^(!mybalance)");
-		public static Pattern table = Pattern.compile("^(!createtable)");
-		public static Pattern leader = Pattern.compile("^(!leaderboard)");
+		public static Pattern points = Pattern.compile("^(!points)\\b");
+        public static Pattern balance = Pattern.compile("^(!balance)\\b");
+        public static Pattern mybalance = Pattern.compile("^(!mybalance)\\b");
+		public static Pattern table = Pattern.compile("^(!createtable)\\b");
+		public static Pattern leader = Pattern.compile("^(!leaderboard)\\b");
 		Matcher m;
 		
 		public String mods = "";
@@ -112,7 +112,9 @@ public static String LAST_FM;
 
 				stmt = c.createStatement();
 				stmt2 = c.createStatement();
+
 				stmt3 = c.createStatement();
+                stmt3 = c.createStatement();
 				
 				switch(m.group(3)) {
 					case "win":
@@ -650,20 +652,26 @@ public static String LAST_FM;
 	private void createNewTable(){
 		Connection c = null;
 		Statement stmt = null;
+        Statement stmt2 = null;
 		try {
 		  Class.forName("org.sqlite.JDBC");
 		  c = DriverManager.getConnection("jdbc:sqlite:users.db");
 		  System.out.println("Opened database successfully");
 
-		  stmt = c.createStatement();
+          stmt = c.createStatement();
+          String drop = "DROP TABLE USERS";        
+          stmt.executeUpdate(drop);
+          stmt.close();
+
+		  stmt2 = c.createStatement();
 		  String sql = "CREATE TABLE USERS " +
 					   "(ID TEXT PRIMARY KEY     NOT NULL," +
 					   " CURRENT 		 INT	 NOT NULL," +
 					   " BET 			 INT	 NOT NULL," +
 					   " MONEY           REAL    NOT NULL)";
 					   
-		  stmt.executeUpdate(sql);
-		  stmt.close();
+		  stmt2.executeUpdate(sql);
+		  stmt2.close();
 		  c.close();
 		} catch ( Exception e ) {
 		  System.err.println( e.getClass().getName() + ": " + e.getMessage() );
