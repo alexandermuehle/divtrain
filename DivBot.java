@@ -1,5 +1,12 @@
 import org.jibble.pircbot.*;
 import java.util.regex.Matcher;
+import java.util.HashMap;
+import java.util.TreeMap;
+import java.util.Map;
+import java.util.Comparator;
+import java.util.List;
+import java.util.LinkedList;
+import java.util.Collections;
 import java.util.regex.Pattern;
 import java.net.*;
 import java.io.*;
@@ -12,6 +19,7 @@ import javax.xml.transform.*;
 import javax.xml.transform.dom.DOMSource; 
 import javax.xml.transform.stream.StreamResult; 
 import com.github.koraktor.steamcondenser.steam.servers.*;
+import com.github.koraktor.steamcondenser.steam.SteamPlayer;
 import java.sql.*;
 
 public class DivBot extends PircBot {
@@ -22,6 +30,8 @@ public static String LAST_FM;
 		public static Pattern prof = Pattern.compile("^(!profile)\\b");
 		public static Pattern ip = Pattern.compile("^(!server)\\b");
 		public static Pattern map = Pattern.compile("^(!map)\\b");
+        public static Pattern frags = Pattern.compile("^(!frags)\\b");
+        public static Pattern fragcheck = Pattern.compile("^(!fragcheck)\\b");
 		public static Pattern song = Pattern.compile("^(!song)\\b");
 		public static Pattern song2 = Pattern.compile("^(!np)\\b");
 		public static Pattern hours = Pattern.compile("^(!hours)\\s*(\\w*)\\b");
@@ -36,11 +46,12 @@ public static String LAST_FM;
 		public static Pattern oBetting = Pattern.compile("^(!openbetting)\\b");
 		public static Pattern cBetting = Pattern.compile("^(!closebetting)\\b");
 		public static Pattern rBetting = Pattern.compile("^(!result)\\s+(win|lose|draw)");
-		public static Pattern points = Pattern.compile("^(!points)\\b");
+		public static Pattern points = Pattern.compile("^(!points)\\s*(\\w*)\\b");
         public static Pattern balance = Pattern.compile("^(!balance)\\b");
         public static Pattern mybalance = Pattern.compile("^(!mybalance)\\b");
 		public static Pattern table = Pattern.compile("^(!createtable)\\b");
 		public static Pattern leader = Pattern.compile("^(!leaderboard)\\b");
+        public static Pattern manual = Pattern.compile("^(!manualpoints)\\s+(\\w+)\\s+(\\+|\\-)\\s+(\\d+)");
 		Matcher m;
 		
 		public String mods = "";
@@ -78,7 +89,43 @@ public static String LAST_FM;
     // react to messages
     public void onMessage(String channel, String sender, String login, String hostname, String message) {
 		String channelName = channel.substring(1);
-		
+
+        //frags
+        m = fragcheck.matcher(message);
+        if (m.find()) {
+            try{
+                String target = channelName;    //channel = name
+                String targetSteam = getSteamFromTwitch(target, channel);
+                String IPInfo = getServerFromSteam(targetSteam);
+                String msg = "Couldn't check frags";
+                    try{
+                        String[] parts = IPInfo.split(":");
+                        InetAddress serverIp = InetAddress.getByName(parts[0]);
+                        SourceServer server = new SourceServer(serverIp, Integer.parseInt(parts[1]));
+                        server.initialize();
+                        HashMap<String, SteamPlayer> players = server.getPlayers();
+                        ScoreComparator comp = new ScoreComparator(players);
+                        TreeMap<String, SteamPlayer> sorted_players = new TreeMap<String, SteamPlayer>(comp);
+                        sorted_players.putAll(players);
+                        msg = "";
+                        for (SteamPlayer value : sorted_players.values()) {
+                            if ( value.getScore() >= 0 )
+                                msg = msg + value.getName() + ": " + value.getScore() + "  ||  ";
+                            if ( value.getScore() < 0 )
+                                msg = msg + value.getName() + ": invalid score  ||  ";
+                        }
+                    }
+                    catch(Exception e){
+                        e.printStackTrace(System.out);
+                        sendMessage(channel, e.getMessage());
+                        return;
+                    }
+                sendMessage(channel, msg);
+            }
+            catch(Exception e){
+                sendMessage(channel, "An error occured contacting the gameserver");
+            }
+        }		
 		
 		//CREATE TABLE
 		
@@ -321,6 +368,36 @@ public static String LAST_FM;
 				return;
 			}
 		}
+
+        //MANUAL POINTS
+        m = manual.matcher(message);
+        if (m.find()){
+            if (  channelName.equalsIgnoreCase(sender) || sender.equalsIgnoreCase("lexsoor") ){
+                if ( !pointsB ){
+                    sendMessage(channel, "Points are being updated");
+                    return;
+                }
+                String user = m.group(2);
+                Connection c = null;
+                Statement stmt = null;
+                try{
+                    Class.forName("org.sqlite.JDBC");
+                    c = DriverManager.getConnection("jdbc:sqlite:users.db");
+                    c.setAutoCommit(false);
+                    stmt = c.createStatement();
+                    String sql = "UPDATE USERS set MONEY = MONEY " + m.group(3) + " " + m.group(4) + " WHERE ID = '" + user + "';";
+                    System.out.println(sql);
+                    stmt.executeUpdate(sql);
+                    c.commit();
+                    stmt.close();
+                    c.close();
+                }
+                catch(Exception e){
+                    System.err.println( e.getClass().getName() + ": " + e.getMessage() );
+                    return;
+                }
+             }
+        }
 		
 		//POINTS
 		if ( ( points.matcher(message).find()) || (balance.matcher(message).find()) || (mybalance.matcher(message).find())) {
@@ -1057,4 +1134,19 @@ public static String LAST_FM;
 		}
 		
 	}
+}
+
+class ScoreComparator implements Comparator<String> {
+    Map<String, SteamPlayer> base;
+    public ScoreComparator(Map<String, SteamPlayer> base) {
+        this.base = base;
+    }
+    
+    public int compare(String a, String b) {
+        if (base.get(a).getScore() >= base.get(b).getScore()){
+            return -1;
+        } else{
+            return 1;
+        }
+    }
 }
