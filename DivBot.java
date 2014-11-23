@@ -1,12 +1,5 @@
 import org.jibble.pircbot.*;
 import java.util.regex.Matcher;
-import java.util.HashMap;
-import java.util.TreeMap;
-import java.util.Map;
-import java.util.Comparator;
-import java.util.List;
-import java.util.LinkedList;
-import java.util.Collections;
 import java.util.regex.Pattern;
 import java.net.*;
 import java.io.*;
@@ -21,10 +14,12 @@ import javax.xml.transform.stream.StreamResult;
 import com.github.koraktor.steamcondenser.steam.servers.*;
 import com.github.koraktor.steamcondenser.steam.SteamPlayer;
 import java.sql.*;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 
 public class DivBot extends PircBot {
     
-public static String LAST_FM;
+		public static String LAST_FM;
 		
 		//regex for !lookup name
 		public static Pattern prof = Pattern.compile("^(!profile)\\b");
@@ -68,74 +63,52 @@ public static String LAST_FM;
 		public boolean bettingB = false;
         public boolean pointsB = true;
 		
+		public SimpleDateFormat timeStamp;
+		public Betting bet;
 		
     public DivBot(String lastfm) {
         this.setName("SlinBot");
 		LAST_FM = lastfm;
+		timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss");
+		bet = new Betting();
     }
     
 	//react to private message
 	public void onPrivateMessage(String sender, String login, String hostname, String message) {
 		mods = message;
-		System.out.println("updated mods");
+		System.out.println(timeStamp.format(Calendar.getInstance().getTime()) + ": updated mods");
 	}
 	
 	//on connect
 	public void onUserList(String channel, User[] users) {
 		sendMessage(channel, "/mods");
-		System.out.println("getting mods");
+		System.out.println(timeStamp.format(Calendar.getInstance().getTime()) + ": getting mods");
 	}
 	
     // react to messages
     public void onMessage(String channel, String sender, String login, String hostname, String message) {
 		String channelName = channel.substring(1);
 
-        //frags
+        //fragcheck
         m = fragcheck.matcher(message);
         if (m.find()) {
-            try{
-                String target = channelName;    //channel = name
-                String targetSteam = getSteamFromTwitch(target, channel);
-                String IPInfo = getServerFromSteam(targetSteam);
-                String msg = "Couldn't check frags";
-                    try{
-                        String[] parts = IPInfo.split(":");
-                        InetAddress serverIp = InetAddress.getByName(parts[0]);
-                        SourceServer server = new SourceServer(serverIp, Integer.parseInt(parts[1]));
-                        server.initialize();
-                        HashMap<String, SteamPlayer> players = server.getPlayers();
-                        ScoreComparator comp = new ScoreComparator(players);
-                        TreeMap<String, SteamPlayer> sorted_players = new TreeMap<String, SteamPlayer>(comp);
-                        sorted_players.putAll(players);
-                        msg = "";
-                        for (SteamPlayer value : sorted_players.values()) {
-                            if ( value.getScore() >= 0 )
-                                msg = msg + value.getName() + ": " + value.getScore() + "  ||  ";
-                            if ( value.getScore() < 0 )
-                                msg = msg + value.getName() + ": invalid score  ||  ";
-                        }
-                    }
-                    catch(Exception e){
-                        e.printStackTrace(System.out);
-                        sendMessage(channel, e.getMessage());
-                        return;
-                    }
-                sendMessage(channel, msg);
-            }
-            catch(Exception e){
-                sendMessage(channel, "An error occured contacting the gameserver");
-            }
+			FragCheck check = new FragCheck(getServerFromSteam(getSteamFromTwitch(m.group(2), channel)));
+			System.out.println(timeStamp.format(Calendar.getInstance().getTime()) + ": checking frags (" +sender+")");
+			sendMessage(channel, check.getMessage() + ";");
+			return;
         }		
 		
 		//CREATE TABLE
-		
 		m = table.matcher(message);
 		if (m.find()){
 			if ( channelName.equalsIgnoreCase(sender) || sender.equalsIgnoreCase("lexsoor") ){
-				createNewTable();
+				String msg = bet.createTable();
+				sendMessage(channel, msg);
+				System.out.println(timeStamp.format(Calendar.getInstance().getTime()) + ": " + msg);
 			}
 			return;
 		}
+		
 		//BETTING
         m = betting.matcher(message);
 		if ( m.find() ){
@@ -144,84 +117,11 @@ public static String LAST_FM;
 				System.out.println(channel + ": This command has been disabled (betting)"); //LOGGING
 				return;
 			}
-			Connection c = null;
-			Statement stmt = null;
-			Statement stmt2 = null;
-            Statement stmt3 = null;
-			int current = 0;
-			int bet = 0;
-            if ( m.group(2).equals("all") ){
-                bet = -1;
-            }
-            else{
-                bet = Integer.parseInt(m.group(2));
-            }
-			try {
-				Class.forName("org.sqlite.JDBC");
-				c = DriverManager.getConnection("jdbc:sqlite:users.db");
-				c.setAutoCommit(false);
-				System.out.println("Opened database successfully");
-
-				stmt = c.createStatement();
-				stmt2 = c.createStatement();
-				stmt3 = c.createStatement();
-				
-                switch(m.group(3)) {
-					case "win":
-						current = 1;
-						break;
-					case "lose":
-						current = -1;
-						break;
-					default:
-                        System.out.println("default");
-						return;
-				}
-				ResultSet rs = stmt2.executeQuery( "SELECT * FROM USERS WHERE ID = '" + sender + "';" );
-				if ( rs.next() ){
-					if ( bet == -1 ) bet = rs.getInt("MONEY") + rs.getInt("BET");
-                    if ( rs.getInt("CURRENT") != 0 ){
-                        String sqlReset = "UPDATE USERS set MONEY = " + Integer.toString(rs.getInt("MONEY") + rs.getInt("BET")) + ", BET = 0, CURRENT = 0 WHERE ID = '" + sender + "';";
-                        stmt3.executeUpdate(sqlReset);
-                        stmt3.close();
-                        c.commit();
-                    }
-					if ( rs.getInt("MONEY") + rs.getInt("BET") < bet ){
-						sendMessage(channel, sender + ": You tried to bet more points (" + bet +") than you currently have (" + Integer.toString(rs.getInt("MONEY")) + ")");
-						stmt2.close();
-						c.close();
-						return;
-					}
-				}
-                else{
-                    if ( bet == -1 ) bet = 2000;
-                    if ( bet > 2000 ){
-                        sendMessage(channel, sender + ": You tried to bet more points (" + bet + ") than you currently have (2000)");                
-                        stmt2.close();
-                        c.close();
-                        return;
-                    }
-                }
-				String sql = "INSERT OR REPLACE INTO USERS (ID, CURRENT, BET, MONEY) " +
-							 "VALUES ('" + sender + "', " 
-							 +  current + ", "  
-							 + 	bet + ", "
-							 +	"COALESCE((SELECT MONEY FROM USERS WHERE ID = '" + sender + "') - " + bet + ", 2000 - " + bet + ")"
-							 + 	");";
-				stmt.executeUpdate(sql);
-				System.out.println(sql);
-				stmt.close();
-				stmt2.close();
-                stmt3.close();
-				c.commit();
-				c.close();
-//				sendMessage(channel, sender + ": You have bet: " + bet + " on " + channelName + " winning his next game");
-			} catch(Exception e){
-				System.err.println( e.getClass().getName() + ": " + e.getMessage() );
-				return;
-			}
+			String msg = bet.betting(m.group(2), m.group(3), sender);
+			if ( ! msg.contains("INSERT OR ") ) sendMessage(channel, msg);
+			System.out.println(timeStamp.format(Calendar.getInstance().getTime()) + ": " + msg);
+			return;
 		}
-
 		
 		//OPEN BETTING
 		m = oBetting.matcher(message);
@@ -252,121 +152,25 @@ public static String LAST_FM;
 		if (m.find()) {
 			if (  channelName.equalsIgnoreCase(sender) || sender.equalsIgnoreCase("lexsoor") ){
 				bettingB = false;
-				int right = 0;
-				int wrong = 0;
-				
-				if (m.group(2).equalsIgnoreCase("win")){
-					right = 1;
-					wrong = -1;
-				}
-				if (m.group(2).equalsIgnoreCase("lose")){
-					right = -1;
-					wrong = 1;
-				}
-                if (m.group(2).equalsIgnoreCase("draw")){
-                    right = 2;
-                }
-				    Connection c = null;
-					Statement stmt = null;
-					Statement stmt2 = null;
-                    Statement stmt3 = null;
-                    Statement stmt4 = null;
-                    Statement stmt5 = null;
-                    Statement stmt6 = null;
-					try {
-						Class.forName("org.sqlite.JDBC");
-						c = DriverManager.getConnection("jdbc:sqlite:users.db");
-						c.setAutoCommit(false);
-						System.out.println("Opened database successfully");
-						stmt = c.createStatement();
-						stmt2 = c.createStatement();
-                        stmt3 = c.createStatement();
-                        stmt4 = c.createStatement();
-                        stmt5 = c.createStatement();
-                        stmt6 = c.createStatement();
-						sendMessage(channel, "Points are being updated");
-                        pointsB = false;
-                        //draw
-                        if (right == 2){
-                            ResultSet rt = stmt5.executeQuery( "SELECT * FROM USERS WHERE CURRENT != 0" );
-                            while ( rt.next() ) {
-                                int newMoney = rt.getInt("MONEY") + rt.getInt("BET");
-                                String sqlD = "UPDATE USERS set MONEY = " + Integer.toString(newMoney) + ", BET = 0, CURRENT = 0 WHERE ID = '" + rt.getString("ID") + "';";
-                                stmt6.executeUpdate(sqlD);
-                                c.commit();
-                            }
-                            rt.close();
-                        }
-						//winning
-						ResultSet rs = stmt.executeQuery( "SELECT * FROM USERS WHERE CURRENT = " + right + ";" );
-						while ( rs.next() ) {
-                            int newMoney = rs.getInt("MONEY") + rs.getInt("BET") + rs.getInt("BET");
-                            System.out.println(Integer.toString(newMoney));
-                            String sqlW = "UPDATE USERS set MONEY = " + Integer.toString(newMoney) + ", BET = 0, CURRENT = 0 WHERE ID = '" + rs.getString("ID") + "';";
-                            System.out.println(sqlW);
-							stmt2.executeUpdate(sqlW);
-                            c.commit();
-							System.out.println( rs.getString("ID") + " won" );
-						}
-                        //losing
-                        ResultSet rr = stmt3.executeQuery( "SELECT * FROM USERS WHERE CURRENT = " + wrong + ";" );
-                        while ( rr.next() ) {
-                            int newMoney = rr.getInt("MONEY");
-                            if ( rr.getInt("MONEY") == 0 ){
-                                newMoney = 69;
-//                                sendMessage(channel, rr.getString("ID") + ": You had to be bailed out, you have 69 points again!");
-                            }
-                            String sqlL = "UPDATE USERS set MONEY = " + Integer.toString(newMoney) + ", BET = 0, CURRENT = 0 WHERE ID = '" + rr.getString("ID") + "';";
-                            System.out.println(sqlL);
-                            stmt4.executeUpdate(sqlL);
-                            c.commit();
-                            System.out.println( rr.getString("ID") + " lost" );
-                        }
-						rs.close();
-                        rr.close();
-						stmt.close();
-						stmt2.close();
-                        stmt3.close();
-                        stmt4.close();
-                        stmt5.close();
-                        stmt6.close();
-						c.close();
-                        sendMessage(channel, "Points have been updated");
-                        pointsB = true;
-                        }
-                        catch(Exception e){
-						System.err.println( e.getClass().getName() + ": " + e.getMessage() );
-						return;
-					}
+				pointsB = false;
+				sendMessage(channel, "Points are being updated");
+				String msg = bet.result(m.group(2));
+				sendMessage(channel, msg);
+				System.out.println(timeStamp.format(Calendar.getInstance().getTime()) + ": " + msg);
+				pointsB = true;
+				return;
 			}
+			sendMessage(channel, "Only the channel owner can enter results");
+			return;
 		}
 		
 		//LEADERBOARD
 		m = leader.matcher(message);
 		if (m.find()) {
-			Connection c = null;
-			Statement stmt = null;
-			try {
-				Class.forName("org.sqlite.JDBC");
-				c = DriverManager.getConnection("jdbc:sqlite:users.db");
-				c.setAutoCommit(false);
-				System.out.println("Opened database successfully");
-				stmt = c.createStatement();
-				ResultSet rs = stmt.executeQuery( "SELECT * FROM USERS ORDER BY MONEY DESC;" );
-				int i = 1;
-				while ( rs.next() ) {
-					sendMessage(channel, i + ": " + rs.getString("ID") + " with " + rs.getInt("MONEY") + " points");
-					System.out.println(i + ": " + rs.getString("ID") + " with " + rs.getInt("MONEY") + " points");
-					i++;
-					if ( i > 3 ) break;
-				}
-				rs.close();
-				stmt.close();
-				c.close();
-			}catch(Exception e){
-				System.err.println( e.getClass().getName() + ": " + e.getMessage() );
-				return;
-			}
+			String msg = bet.getLeaderboard();
+			sendMessage(channel, msg);
+			System.out.println(timeStamp.format(Calendar.getInstance().getTime()) + ": " + msg);
+			return;
 		}
 
         //MANUAL POINTS
@@ -377,26 +181,12 @@ public static String LAST_FM;
                     sendMessage(channel, "Points are being updated");
                     return;
                 }
-                String user = m.group(2);
-                Connection c = null;
-                Statement stmt = null;
-                try{
-                    Class.forName("org.sqlite.JDBC");
-                    c = DriverManager.getConnection("jdbc:sqlite:users.db");
-                    c.setAutoCommit(false);
-                    stmt = c.createStatement();
-                    String sql = "UPDATE USERS set MONEY = MONEY " + m.group(3) + " " + m.group(4) + " WHERE ID = '" + user + "';";
-                    System.out.println(sql);
-                    stmt.executeUpdate(sql);
-                    c.commit();
-                    stmt.close();
-                    c.close();
-                }
-                catch(Exception e){
-                    System.err.println( e.getClass().getName() + ": " + e.getMessage() );
-                    return;
-                }
-             }
+				String msg = bet.manualPoints(m.group(2), m.group(3), m.group(4));
+				sendMessage(channel, msg);
+				System.out.println(timeStamp.format(Calendar.getInstance().getTime()) + ": " + msg);
+				return;
+            }
+			sendMessage(channel, "Only the channel owner can give and take points manually");
         }
 		
 		//POINTS
@@ -405,54 +195,10 @@ public static String LAST_FM;
                 sendMessage(channel, "Points are being updated");
                 return;
             }
-            Connection c = null;
-            Statement stmt = null;
-            Statement stmt2 = null;
-			try {
-				Class.forName("org.sqlite.JDBC");
-				c = DriverManager.getConnection("jdbc:sqlite:users.db");
-				c.setAutoCommit(false);
-				System.out.println("Opened database successfully");
-
-				stmt = c.createStatement();
-                stmt2 = c.createStatement();
-				String sql = "INSERT OR IGNORE INTO USERS (ID, CURRENT, BET, MONEY) " +
-                                 "VALUES ('" + sender
-                             + "', 0"
-                             +  ", 0"
-                             +  ", 2000"
-                             +  ");";
-                stmt2.executeUpdate(sql);
-                c.commit();
-                String s = "";
-				ResultSet rs = stmt.executeQuery( "SELECT * FROM USERS WHERE ID = '" + sender + "';" );
-				while ( rs.next() ) {
-                    s = "";
-                    switch(rs.getInt("CURRENT")) {
-                        case 0:
-                            s = "draw";
-                            break;
-                        case 1:
-                            s = "win";
-                            break;
-                        case -1:
-                            s = "loss";
-                            break;
-                        default:
-                            System.out.println("default");
-                            return;
-                    }
-					sendMessage(channel, sender + ": You currently have " + rs.getInt("MONEY") + " points with " + Integer.toString(rs.getInt("BET")) + " open in bets (" + s + ")" );
-                }
-				rs.close();
-				stmt.close();
-                stmt2.close();
-                c.commit();
-				c.close();
-			}catch(Exception e){
-				System.err.println( e.getClass().getName() + ": " + e.getMessage() );
-				return;
-			}
+            String msg = bet.getPoints(sender);
+			sendMessage(channel, msg);
+			System.out.println(timeStamp.format(Calendar.getInstance().getTime()) + ": " + msg);
+			return;
 		}
 		
 		//PROFILE
@@ -768,37 +514,6 @@ public static String LAST_FM;
 		if (comm.matcher(message).find()) {
 			sendMessage(channel, "Commands: !server || !stats [game] || !hours [game] || !profile || !log || !np || !credit");
 		}
-	}
-	
-	private void createNewTable(){
-		Connection c = null;
-		Statement stmt = null;
-        Statement stmt2 = null;
-		try {
-		  Class.forName("org.sqlite.JDBC");
-		  c = DriverManager.getConnection("jdbc:sqlite:users.db");
-		  System.out.println("Opened database successfully");
-
-          stmt = c.createStatement();
-          String drop = "DROP TABLE USERS";        
-          stmt.executeUpdate(drop);
-          stmt.close();
-
-		  stmt2 = c.createStatement();
-		  String sql = "CREATE TABLE USERS " +
-					   "(ID TEXT PRIMARY KEY     NOT NULL," +
-					   " CURRENT 		 INT	 NOT NULL," +
-					   " BET 			 INT	 NOT NULL," +
-					   " MONEY           REAL    NOT NULL)";
-					   
-		  stmt2.executeUpdate(sql);
-		  stmt2.close();
-		  c.close();
-		} catch ( Exception e ) {
-		  System.err.println( e.getClass().getName() + ": " + e.getMessage() );
-		  return;
-		}
-		System.out.println("Table created successfully");
 	}
 	
 	private String getLogLink(String targetSteam){
@@ -1134,19 +849,4 @@ public static String LAST_FM;
 		}
 		
 	}
-}
-
-class ScoreComparator implements Comparator<String> {
-    Map<String, SteamPlayer> base;
-    public ScoreComparator(Map<String, SteamPlayer> base) {
-        this.base = base;
-    }
-    
-    public int compare(String a, String b) {
-        if (base.get(a).getScore() >= base.get(b).getScore()){
-            return -1;
-        } else{
-            return 1;
-        }
-    }
 }
