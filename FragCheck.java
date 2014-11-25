@@ -7,12 +7,12 @@ import com.github.koraktor.steamcondenser.steam.SteamPlayer;
 import java.net.*;
 
  
- public class FragCheck{
+ public class FragCheck{												
  
 	private static String IPInfo;
  
-	public FragCheck(String IPInfo){
-		IPInfo = this.IPInfo;
+	public FragCheck(String Info){
+		IPInfo = Info;
 	}
 	
 	public String getMessage(){
@@ -23,7 +23,9 @@ import java.net.*;
 					InetAddress serverIp = InetAddress.getByName(parts[0]);
 					SourceServer server = new SourceServer(serverIp, Integer.parseInt(parts[1]));
 					server.initialize();
+					System.out.println("server");
 					HashMap<String, SteamPlayer> players = server.getPlayers();
+					System.out.println(players);
 					ScoreComparator comp = new ScoreComparator(players);
 					TreeMap<String, SteamPlayer> sorted_players = new TreeMap<String, SteamPlayer>(comp);
 					sorted_players.putAll(players);

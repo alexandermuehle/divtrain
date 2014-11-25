@@ -92,7 +92,9 @@ public class DivBot extends PircBot {
         //fragcheck
         m = fragcheck.matcher(message);
         if (m.find()) {
-			FragCheck check = new FragCheck(getServerFromSteam(getSteamFromTwitch(m.group(2), channel)));
+			String targetSteam = getSteamFromTwitch(channelName, channel);
+			String IPInfo = getServerFromSteam(targetSteam);
+			FragCheck check = new FragCheck(IPInfo);
 			System.out.println(timeStamp.format(Calendar.getInstance().getTime()) + ": checking frags (" +sender+")");
 			sendMessage(channel, check.getMessage() + ";");
 			return;
