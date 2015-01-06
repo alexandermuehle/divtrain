@@ -1,6 +1,7 @@
 import org.jibble.pircbot.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.LinkedList;
 import java.net.*;
 import java.io.*;
 import org.json.JSONObject;
@@ -65,6 +66,8 @@ public class DivBot extends PircBot {
 		
 		public SimpleDateFormat timeStamp;
 		public Betting bet;
+
+        public LinkedList<String> antiSpam = new LinkedList<String>();
 		
     public DivBot(String lastfm) {
         this.setName("SlinBot");
@@ -89,6 +92,14 @@ public class DivBot extends PircBot {
     public void onMessage(String channel, String sender, String login, String hostname, String message) {
 		String channelName = channel.substring(1);
 
+
+//        if (antiSpam.contains(message.toLowerCase())){
+//            sendMessage(channel, "/timeout " + sender + " 1");
+//            sendMessage(channel, sender + " please dont spam");
+//        }
+//        if ( !message.contains("!bet") || !message.contains("!points") || message.length() > 6 ) antiSpam.add(message.toLowerCase());
+//        if (antiSpam.size() > 15) antiSpam.pop();
+
         //fragcheck
         m = fragcheck.matcher(message);
         if (m.find()) {
@@ -96,7 +107,7 @@ public class DivBot extends PircBot {
 			String IPInfo = getServerFromSteam(targetSteam);
 			FragCheck check = new FragCheck(IPInfo);
 			System.out.println(timeStamp.format(Calendar.getInstance().getTime()) + ": checking frags (" +sender+")");
-			sendMessage(channel, check.getMessage() + ";");
+			sendMessage(channel, "Frags: " +  check.getMessage());
 			return;
         }		
 		

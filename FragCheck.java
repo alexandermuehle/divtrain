@@ -13,6 +13,7 @@ import java.net.*;
  
 	public FragCheck(String Info){
 		IPInfo = Info;
+        return;
 	}
 	
 	public String getMessage(){
@@ -23,13 +24,10 @@ import java.net.*;
 					InetAddress serverIp = InetAddress.getByName(parts[0]);
 					SourceServer server = new SourceServer(serverIp, Integer.parseInt(parts[1]));
 					server.initialize();
-					System.out.println("server");
 					HashMap<String, SteamPlayer> players = server.getPlayers();
-					System.out.println(players);
 					ScoreComparator comp = new ScoreComparator(players);
 					TreeMap<String, SteamPlayer> sorted_players = new TreeMap<String, SteamPlayer>(comp);
 					sorted_players.putAll(players);
-					System.out.println(sorted_players);
 					msg = "";
 					for (SteamPlayer value : sorted_players.values()) {
 						if ( value.getScore() >= 0 )
@@ -41,6 +39,7 @@ import java.net.*;
 				catch(Exception e){
 					return e.getMessage();
 				}
+            System.out.println(msg);
 			return msg;
 		}
 		catch(Exception e){
