@@ -280,7 +280,7 @@ public class Betting{
 						s = "loss";
 						break;
 				}
-				tmp = sender + ": You currently have " + rs.getInt("MONEY") + " points with " + Integer.toString(rs.getInt("BET")) + " open in bets (" + s + ")";
+				tmp = sender + " " + rs.getInt("MONEY") + " points (" + Integer.toString(rs.getInt("BET")) + " open in betting - " + s + ")";
 			}
 			rs.close();
 			stmt.close();
